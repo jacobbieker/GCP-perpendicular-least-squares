@@ -14,7 +14,7 @@ def plane_solve():
     return 0
 
 
-def read_clusters():
+def read_clusters(*args):
     # TODO: Read in the files containing the cluster points
     return 0
 
@@ -24,19 +24,19 @@ def determine_type():
     return 0
 
 
-def initial_guess(largest_cluster, type):
-    if type == "line":
+def initial_guess(largest_cluster, type_solution):
+    if type_solution == "line":
         return 0
-    elif type == "plane":
+    elif type_solution == "plane":
         return 0
     # TODO: Get an inital guess from the perpendicular least squares method from the largest cluster
     return
 
 
-def check_guess(cluster, type, guess):
-    if type == "line":
+def check_guess(cluster, type_solution, guess):
+    if type_solution == "line":
         return 0
-    elif type == "plane":
+    elif type_solution == "plane":
         return 0
     # TODO: check guess with another cluster
 
