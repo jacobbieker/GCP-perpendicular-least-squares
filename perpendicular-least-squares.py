@@ -33,6 +33,24 @@ def initial_guess(largest_cluster, type):
     return
 
 
+def check_guess(cluster, type, guess):
+    if type == "line":
+        return 0
+    elif type == "plane":
+        return 0
+    # TODO: check guess with another cluster
+
+
+def bootstrap_cluster(cluster):
+    # TODO: bootstrap a cluster to get a different distribution to check with check_guess
+    return 0
+
+
+def determine_uncertainty(solutions):
+    # TODO: Take a list or dict of solutions and determine the uncertainty in them
+    return 0
+
 if __name__ == "__main__":
     arguments = str(sys.argv)
     print(arguments)
+
