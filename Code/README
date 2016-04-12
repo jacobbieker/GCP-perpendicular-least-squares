@@ -1,0 +1,18 @@
+Code for the old implementation of fitting linear relations in 2 or 3 dimensions
+with flexible choice of minimization algorithm and direction.
+
+------------------------------------------------------------------------
+README           this file
+iterfitlin.cl    main cl-script, this is declared and run under IRAF
+random.cl        created random numbers, used for the bootstrap algorithm in iterfitlin.cl
+makefile         makefile for Fortran program random which is used by random.cl
+random.f         main program for random
+ran1.f           Numerical recipes code for random number generation
+
+run_iter.cl      Example of how to run iterfitlin, uses the next three FITS files
+                 All our data are in FITS Tables, so would be best if the new python
+                 implemenation can read FITS, otherwise we'll add that later
+comafit.fits
+rxj0152allfit.fits
+rxj1226allfit.fits
+run_iter_output.txt  Output from running run_iter.cl
