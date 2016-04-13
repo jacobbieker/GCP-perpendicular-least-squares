@@ -170,6 +170,17 @@ if __name__ == "__main__":
     num_bootstrap = int(input("Number of estimates for bootstrap: ") or 0)
     rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
 
+    two_parameter = False
+    if x2_col == "" or x2_col == " ":
+        two_parameter = True
+        n_b = 0
+        n_factbin = 0
+
+    if two_parameter:
+        plane_solve()
+    else:
+        line_solve()
+
     hdulist = fits.open(filename)
     print(hdulist.info())
     print(repr(hdulist[0].header))
