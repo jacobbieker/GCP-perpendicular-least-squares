@@ -155,12 +155,12 @@ if __name__ == "__main__":
 
     filename = input("Enter the filename containing the cluster(s): ")
     tables = input("List of input STSDAS tables: ")
-    min_choice = input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): " or "delta100")
-    res_choice = input("Residual to minimize (per,y,x1,x2): " or "per")
-    y_col = input("Column name for y: " or "lre_GR_sc")
-    x1_col = input("Column name for x1: " or "lsig_re")
+    min_choice = input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ") or "delta100"
+    res_choice = input("Residual to minimize (per,y,x1,x2): ") or "per"
+    y_col = input("Column name for y: ") or "lre_GR_sc"
+    x1_col = input("Column name for x1: ") or "lsig_re"
     x2_col = input("Column name for x2 (optional): ")
-    zeropoint_choice = input("Zeropoints (median, mean): " or "median")
+    zeropoint_choice = input("Zeropoints (median, mean): ") or "median"
     galaxy_name = input("Column name for galaxy: ")
     group_name = input("Column name for group: ")
     factor_change_a = float(input("Starting factor for changes in a: ") or 0.05)
