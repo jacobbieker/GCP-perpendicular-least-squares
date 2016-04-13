@@ -151,38 +151,24 @@ def determine_uncertainty(solutions):
     return 0
 
 if __name__ == "__main__":
-    iterations = 0
-    galaxy_name = ""
-    group_name = ""
-    factor_change_a = 0.05
-    factor_change_b = 0.02
-    restart_factor = True
-    num_bootstrap = 0
-    rand_seed = 1
-    zeropoint_choice = "median" # or mean
-    min_distance = "delta100" # or quartile, delta60, rms100, rms60
-    min_residual = "per" # or y, x1, x2
-    y_col = "lre_GR_sc" # prompt for it
-    x1_col = "lsig_re" # prompt for it
-    x2_col = "lIe_GR_sccor" # prompt for it (optional)
     list_clusters = [] # prompt "List of input STSDAS tables"
 
     filename = input("Enter the filename containing the cluster(s): ")
     tables = input("List of input STSDAS tables: ")
-    min_choice = input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")
-    res_choice = input("Residual to minimize (per,y,x1,x2): ")
-    y_col = input("Column name for y: ")
-    x1_col = input("Column name for x1: ")
+    min_choice = input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): " or "delta100")
+    res_choice = input("Residual to minimize (per,y,x1,x2): " or "per")
+    y_col = input("Column name for y: " or "lre_GR_sc")
+    x1_col = input("Column name for x1: " or "lsig_re")
     x2_col = input("Column name for x2 (optional): ")
-    zeropoint_choice = input("Zeropoints (median, mean): ")
+    zeropoint_choice = input("Zeropoints (median, mean): " or "median")
     galaxy_name = input("Column name for galaxy: ")
     group_name = input("Column name for group: ")
-    factor_change_a = float(input("Starting factor for changes in a: "))
-    factor_change_b = float(input("Starting factor for changes in b: "))
-    iterations = int(input("Maximum number of iterations: "))
-    restart_factor = bool(input("Restart iteration with smaller factors: "))
-    num_bootstrap = int(input("Number of estimates for bootstrap: "))
-    rand_seed = int(input("Seed for random used in bootstrap: "))
+    factor_change_a = float(input("Starting factor for changes in a: ") or 0.05)
+    factor_change_b = float(input("Starting factor for changes in b: ") or 0.02)
+    iterations = int(input("Maximum number of iterations: ") or 0)
+    restart_factor = bool(input("Restart iteration with smaller factors: ") or True)
+    num_bootstrap = int(input("Number of estimates for bootstrap: ") or 0)
+    rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
 
     hdulist = fits.open(filename)
     print(hdulist.info())
