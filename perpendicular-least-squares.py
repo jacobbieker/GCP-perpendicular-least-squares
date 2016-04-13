@@ -57,6 +57,23 @@ def random_number(number, seed):
     return rand_nums
 
 
+def min_quartile():
+    return 0
+
+
+def min_delta(percentage):
+    if percentage == 100:
+        return 0
+    elif percentage == 60:
+        return 0
+
+
+def min_rms(percentage):
+    if percentage == 100:
+        return 0
+    elif percentage == 60:
+        return 0
+
 
 def zeropoint(type_solution):
     if type_solution.lower() == "median":
