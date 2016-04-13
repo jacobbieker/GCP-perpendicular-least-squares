@@ -173,13 +173,11 @@ if __name__ == "__main__":
     two_parameter = False
     if x2_col == "" or x2_col == " ":
         two_parameter = True
-        n_b = 0
-        n_factbin = 0
 
     if two_parameter:
-        plane_solve()
-    else:
         line_solve()
+    else:
+        plane_solve()
 
     hdulist = fits.open(filename)
     print(hdulist.info())
