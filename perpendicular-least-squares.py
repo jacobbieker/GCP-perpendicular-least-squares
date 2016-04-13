@@ -45,15 +45,26 @@ from astropy.io import fits
 # Inger Jorgensen, Gemini Observatory
 # e-mail: inger@gemini.edu
 
+
 def random_number(number, seed):
     rand_nums = []
     if seed > 0:
         seed = -seed
     random.seed(a=seed)
     for i in range(number):
-        rand_num = random.randint(0,1)
+        rand_num = random.randint(0, 1)
         rand_nums.append(rand_num)
     return rand_nums
+
+
+
+def zeropoint(type_solution):
+    if type_solution.lower() == "median":
+        # use with delta and quartile
+        return 0
+    elif type_solution.lower() == "mean":
+        # use with rms
+        return 0
 
 
 def residuals_perpendicular():
