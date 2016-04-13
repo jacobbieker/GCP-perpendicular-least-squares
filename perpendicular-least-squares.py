@@ -1,9 +1,16 @@
 __author__ = 'Jacob Bieker'
-import os, sys
+import os, sys, random
 import numpy
 from multiprocessing import Pool
 from astropy.io import fits
 
+
+def random_number(number, seed):
+    if seed > 0:
+        seed = -seed
+    random.seed(a=seed)
+    for i in range(number):
+        rand_num = random.randint(0,1)
 
 
 def line_solve():
