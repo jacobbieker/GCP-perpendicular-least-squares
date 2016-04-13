@@ -60,10 +60,24 @@ def determine_uncertainty(solutions):
     return 0
 
 if __name__ == "__main__":
-    arguments = str(sys.argv)
-    print(arguments)
-   # for index, argument in enumerate(arguments):
-    #    if index != 0:
+    iterations = 0
+    galaxy_name = ""
+    group_name = ""
+    factor_change_a = 0.0
+    factor_change_b = 0.0
+    restart_factor = True
+    num_bootstrap = 0
+    rand_seed = 1
+    zeropoint_choice = "median" # or mean
+    min_distance = "delta100" # or quartile, delta60, rms100, rms60
+    min_residual = "per" # or y, x1, x2
+    y_col = "lre_GR_sc" # prompt for it
+    x1_col = "lsig_re" # prompt for it
+    x2_col = "lIe_GR_sccor" # prompt for it (optional)
+    list_clusters = [] # prompt "List of input STSDAS tables"
+
     hdulist = fits.open("comafit.fits")
     print(hdulist.info())
+    print(repr(hdulist[0].header))
+
 
