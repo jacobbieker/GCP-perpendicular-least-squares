@@ -168,6 +168,22 @@ if __name__ == "__main__":
     list_clusters = [] # prompt "List of input STSDAS tables"
 
     filename = input("Enter the filename containing the cluster(s): ")
+    tables = input("List of input STSDAS tables: ")
+    min_choice = input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")
+    res_choice = input("Residual to minimize (per,y,x1,x2): ")
+    y_col = input("Column name for y: ")
+    x1_col = input("Column name for x1: ")
+    x2_col = input("Column name for x2 (optional): ")
+    zeropoint_choice = input("Zeropoints (median, mean): ")
+    galaxy_name = input("Column name for galaxy: ")
+    group_name = input("Column name for group: ")
+    factor_change_a = float(input("Starting factor for changes in a: "))
+    factor_change_b = float(input("Starting factor for changes in b: "))
+    iterations = int(input("Maximum number of iterations: "))
+    restart_factor = bool(input("Restart iteration with smaller factors: "))
+    num_bootstrap = int(input("Number of estimates for bootstrap: "))
+    rand_seed = int(input("Seed for random used in bootstrap: "))
+
     hdulist = fits.open(filename)
     print(hdulist.info())
     print(repr(hdulist[0].header))
