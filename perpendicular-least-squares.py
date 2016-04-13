@@ -46,8 +46,10 @@ from astropy.io import fits
 # e-mail: inger@gemini.edu
 
 
-def random_number(number, seed):
+def random_number(number, seed, nboot):
     rand_nums = []
+    if seed <= 0 or seed <= nboot:
+        seed = max(seed*seed, (seed+1)*(nboot+1))
     if seed > 0:
         seed = -seed
     random.seed(a=seed)
@@ -139,7 +141,7 @@ def check_guess(cluster, type_solution, guess):
     # TODO: check guess with another cluster
 
 
-def bootstrap_cluster(cluster):
+def bootstrap_cluster(cluster, nboot):
     # TODO: bootstrap a cluster to get a different distribution to check with check_guess
     return 0
 
