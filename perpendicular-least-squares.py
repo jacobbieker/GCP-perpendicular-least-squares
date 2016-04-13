@@ -62,7 +62,8 @@ def determine_uncertainty(solutions):
 if __name__ == "__main__":
     arguments = str(sys.argv)
     print(arguments)
-    for index, argument in enumerate(arguments):
-        if index != 0:
-            hdulist = fits.open(argument)
+   # for index, argument in enumerate(arguments):
+    #    if index != 0:
+    hdulist = fits.open("comafit.fits")
+    print(hdulist.info())
 
