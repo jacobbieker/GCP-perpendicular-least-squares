@@ -148,16 +148,16 @@ def determine_uncertainty(solutions):
 if __name__ == "__main__":
     list_clusters = [] # prompt "List of input STSDAS tables"
 
-    filename = input("Enter the filename containing the cluster(s): ")
-    tables = input("List of input STSDAS tables: ")
-    min_choice = input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ") or "delta100"
-    res_choice = input("Residual to minimize (per,y,x1,x2): ") or "per"
-    y_col = input("Column name for y: ") or "lre_GR_sc"
-    x1_col = input("Column name for x1: ") or "lsig_re"
-    x2_col = input("Column name for x2 (optional): ")
+    filename = str(input("Enter the filename containing the cluster(s): ")).strip()
+    tables = str(input("List of input STSDAS tables: ")).strip()
+    min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
+    res_choice = str(input("Residual to minimize (per,y,x1,x2): ")).strip() or "per"
+    y_col = str(input("Column name for y: ")).strip() or "lre_GR_sc"
+    x1_col = str(input("Column name for x1: ")).strip() or "lsig_re"
+    x2_col = str(input("Column name for x2 (optional): ")).strip()
     zeropoint_choice = input("Zeropoints (median, mean): ") or "median"
-    galaxy_name = input("Column name for galaxy: ")
-    group_name = input("Column name for group: ")
+    galaxy_name = str(input("Column name for galaxy: ")).strip()
+    group_name = str(input("Column name for group: ")).strip()
     factor_change_a = float(input("Starting factor for changes in a: ") or 0.05)
     factor_change_b = float(input("Starting factor for changes in b: ") or 0.02)
     iterations = int(input("Maximum number of iterations: ") or 0)
