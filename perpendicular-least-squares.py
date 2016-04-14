@@ -50,11 +50,11 @@ def random_number(number, seed, nboot):
     rand_nums = []
     if seed <= 0 or seed <= nboot:
         seed = max(seed*seed, (seed+1)*(nboot+1))
-    if seed > 0:
+    elif seed > 0:
         seed = -seed
     random.seed(a=seed)
     for i in range(number):
-        rand_num = random.randint(0, 1)
+        rand_num = random.random()
         rand_nums.append(rand_num)
     return rand_nums
 
@@ -169,7 +169,7 @@ if __name__ == "__main__":
     list_temp = tables.split(" ")
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
-
+    print(random_numbers)
     # Checks for which variables and functions to call
     if not x2_col:
         # Only use two parameters
@@ -180,6 +180,6 @@ if __name__ == "__main__":
 
     print(hdulist.info())
     print(repr(hdulist[0].header))
-    #print(repr(hdulist[1].data))
+    # print(repr(hdulist[1].data))
 
 
