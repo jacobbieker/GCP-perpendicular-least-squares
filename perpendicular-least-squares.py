@@ -146,10 +146,8 @@ def determine_uncertainty(solutions):
     return 0
 
 if __name__ == "__main__":
-    list_clusters = [] # prompt "List of input STSDAS tables"
-
     filename = str(input("Enter the filename containing the cluster(s): ")).strip()
-    tables = str(input("List of input STSDAS tables: ")).strip()
+    tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
     res_choice = str(input("Residual to minimize (per,y,x1,x2): ")).strip() or "per"
     y_col = str(input("Column name for y: ")).strip() or "lre_GR_sc"
@@ -165,11 +163,13 @@ if __name__ == "__main__":
     num_bootstrap = int(input("Number of estimates for bootstrap: ") or 0)
     rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
 
+    # preprocess input
+    list_clusters = tables.split(" ")
     hdulist = fits.open(filename)
 
     # Checks for which variables and functions to call
-    if not x2_col.strip():
-        # If only use two parameters
+    if not x2_col:
+        # Only use two parameters
         factor_change_b = 0.0
         line_solve()
     else:
