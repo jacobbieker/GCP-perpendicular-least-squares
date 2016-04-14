@@ -114,13 +114,8 @@ def plane_solve():
     return 0
 
 
-def read_clusters(*args):
+def read_clusters(fits_file):
     # TODO: Read in the files containing the cluster points
-    return 0
-
-
-def determine_type():
-    # TODO: Determine the type (i.e. Plane or Line) to solve for
     return 0
 
 
@@ -182,5 +177,6 @@ if __name__ == "__main__":
 
     print(hdulist.info())
     print(repr(hdulist[0].header))
+    #print(repr(hdulist[1].data))
 
 
