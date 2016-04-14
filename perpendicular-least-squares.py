@@ -164,7 +164,8 @@ if __name__ == "__main__":
     rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
 
     # preprocess input
-    list_clusters = tables.split(" ")
+    list_temp = tables.split(" ")
+    list_clusters = [x for x in list_temp if x.strip()]
     hdulist = fits.open(filename)
 
     # Checks for which variables and functions to call
