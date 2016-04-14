@@ -59,25 +59,25 @@ def random_number(number, seed, nboot):
     return rand_nums
 
 
-def min_quartile():
+def min_quartile(cluster):
     return 0
 
 
-def min_delta(percentage):
+def min_delta(cluster, percentage):
     if percentage == 100:
         return 0
     elif percentage == 60:
         return 0
 
 
-def min_rms(percentage):
+def min_rms(cluster, percentage):
     if percentage == 100:
         return 0
     elif percentage == 60:
         return 0
 
 
-def zeropoint(type_solution):
+def zeropoint(cluster, type_solution):
     if type_solution.lower() == "median":
         # use with delta and quartile
         return 0
@@ -162,11 +162,13 @@ if __name__ == "__main__":
     restart_factor = bool(input("Restart iteration with smaller factors: ") or True)
     num_bootstrap = int(input("Number of estimates for bootstrap: ") or 0)
     rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
+    rand_num = int(input("Number of random numbers ") or 1)
 
     # preprocess input
+    hdulist = fits.open(filename)
     list_temp = tables.split(" ")
     list_clusters = [x for x in list_temp if x.strip()]
-    hdulist = fits.open(filename)
+    random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
 
     # Checks for which variables and functions to call
     if not x2_col:
