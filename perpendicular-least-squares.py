@@ -45,6 +45,8 @@ from astropy.io import fits
 # Inger Jorgensen, Gemini Observatory
 # e-mail: inger@gemini.edu
 
+# vector sought after n = ( - 1, a, b)
+# Use median zeropoint, not mean
 # finding the residual: delta =(logre -a*1og(J) - b*log<I>)/(1 + a^2 + b^2)^(1/2).
 
 
