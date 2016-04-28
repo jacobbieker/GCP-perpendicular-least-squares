@@ -170,6 +170,8 @@ if __name__ == "__main__":
 
     # preprocess input
     hdulist = fits.open(filename)
+    print(hdulist.info())
+    print(hdulist[1].dump(datafile="comafit.txt", cdfile="comacolumn.txt", hfile="comaheader.txt", clobber=True))
     list_temp = tables.split(" ")
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
