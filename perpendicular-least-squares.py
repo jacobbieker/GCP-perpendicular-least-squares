@@ -84,6 +84,9 @@ def min_delta(filename, percentage):
 
 def min_rms(cluster, percentage):
     if percentage == 100:
+        residuals = fits.getdata(filename=filename, extname="residual")
+        #TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
+        rms = numpy.std(residuals) * numpy.sqrt
         return 0
     elif percentage == 60:
         return 0
