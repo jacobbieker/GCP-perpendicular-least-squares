@@ -67,8 +67,16 @@ def min_quartile(cluster):
     return 0
 
 
-def min_delta(cluster, percentage):
+def min_delta(filename, percentage):
     if percentage == 100:
+        residuals = fits.getdata(filename=filename, extname="residual")
+        absolute_residuals = []
+        for residual in residuals:
+            absolute_residual = abs(residual)
+            absolute_residuals.append(absolute_residual)
+        delta = numpy.mean(absolute_residuals)
+        #TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
+        rms = numpy.std(absolute_residuals) * numpy.sqrt
         return 0
     elif percentage == 60:
         return 0
@@ -97,14 +105,17 @@ def residuals_perpendicular():
 
 def residuals_y():
     # TODO: Convert: delta = (y - a*x1 - b*x2 - c)
+    # The calculated residuals go into the "res" column
     return 0
 
 
 def residuals_x1():
+    # The calculated residuals go into the "res" column
     return 0
 
 
 def residuals_x2():
+    # The calculated residuals go into the "res" column
     return 0
 
 
@@ -166,7 +177,7 @@ if __name__ == "__main__":
     restart_factor = bool(input("Restart iteration with smaller factors: ") or True)
     num_bootstrap = int(input("Number of estimates for bootstrap: ") or 0)
     rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
-    rand_num = int(input("Number of random numbers ") or 1)
+    rand_num = int(input("Number of random numbers: ") or 1)
 
     # preprocess input
     hdulist = fits.open(filename)
@@ -184,8 +195,9 @@ if __name__ == "__main__":
     else:
         plane_solve()
 
-    print(hdulist.info())
-    print(repr(hdulist[0].header))
-    # print(repr(hdulist[1].data))
+    print(hdulist[1].data.columns)
+    #print(hdulist[1].data)
+
+
 
 
