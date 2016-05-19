@@ -82,7 +82,7 @@ def min_delta(filename, percentage):
         return 0
 
 
-def min_rms(cluster, percentage):
+def min_rms(filename, percentage):
     if percentage == 100:
         residuals = fits.getdata(filename=filename, extname="residual")
         #TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
@@ -93,12 +93,79 @@ def min_rms(cluster, percentage):
 
 
 def zeropoint(cluster, type_solution):
-    if type_solution.lower() == "median":
-        # use with delta and quartile
-        return 0
-    elif type_solution.lower() == "mean":
-        # use with rms
-        return 0
+    """
+    # derive the zero points and calculate the residuals
+# the zero points are median or mean as defined by n_zeropoint
+n_norm=1.                         # min in y
+if(n_resalgo=="per")
+  n_norm=sqrt(1.+n_a**2+n_b**2)   # min perpendicular
+if(n_resalgo=="x1")
+  n_norm=-1.*n_a                  # min in x1
+if(n_resalgo=="x2")
+  n_norm=-1.*n_b                  # min in x2
+
+tcalc(tmpall,"res","0.",colfmt="f6.3")
+
+for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
+# delta y
+ n_expression = "("//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//")"
+ print(n_expression, > tmpexp)
+ tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
+ delete(tmpexp,verify=no)
+ n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
+ print(n_expression, >tmpexp)
+ tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
+ delete(tmpexp,verify=no)
+ tstat(tmpall,"z"//n_i,lowlim=INDEF,highlim=100., >> "/dev/null")
+ if(n_zeropoint=="median")
+   n_zero=tstat.median
+ else
+   n_zero=tstat.mean
+# printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
+# residuals normalized
+ n_expression="((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
+ print(n_expression, > tmpexp)
+ tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3")
+ delete(tmpexp,verify=no)
+ n_expression="res+((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm
+ print(n_expression, > tmpexp)
+ tcalc(tmpall,"res","@"//tmpexp,colfmt="f6.3"
+ delete(tmpexp,verify=no)
+}
+
+    RMA coefficients: a_factor, b_factor
+    :param cluster:
+    :param type_solution:
+    :return:
+    """
+    n_norm=1.                         # min in y
+    if res_choice=="per":
+        n_norm=numpy.sqrt(1.0+a_factor**2+b_factor**2)   # min perpendicular
+    if res_choice=="x1":
+        n_norm=-1.0*a_factor                  # min in x1
+    if res_choice=="x2":
+        n_norm=-1.0*b_factor         # min in x2
+
+    for index, galaxy in enumerate(cluster):
+        zeropoint_dict = {}
+        # expression "//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//"
+        # n_recol = y1, n_Iecol = x2_col, n_sigcol = x1_col
+        #TODO: Get the columns from the FITS file for the expression
+        expression = y_col - a_factor * x1_col - b_factor * x2_col
+        zeropoint_dict["z"+str(index)] = expression
+        # n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
+        expression = zeropoint_dict["z"+str(index)] # * (number of cluster == index) + 1000.0 * (number of cluser not equal to index
+        zeropoint_dict["z"+str(index)] = expression
+        # Ignore z values that are above 100.0
+        if type_solution.lower() == "median":
+            # use with delta and quartile
+            n_zero = numpy.median(zeropoint_dict)
+        elif type_solution.lower() == "mean":
+            # use with rms
+            n_zero = numpy.mean(zeropoint_dict)
+
+            # printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
+            # residuals normalized
 
 
 def residuals_perpendicular():
