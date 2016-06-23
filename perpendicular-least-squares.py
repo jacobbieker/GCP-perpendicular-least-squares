@@ -166,9 +166,9 @@ for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
 
             # printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
             # residuals normalized
-        residuals(n_norm);
+        residuals(n_norm, index, n_zero);
 
-def residuals(n_norm):
+def residuals(n_norm, cluster_number, n_zero):
     '''
      n_expression="((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
  print(n_expression, > tmpexp)
@@ -181,6 +181,9 @@ def residuals(n_norm):
     :param n_norm:
     :return:
     '''
+    expression = (zeropoint_dict[cluster_number] - n_zero)# * (nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
+    # TODO: tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3")
+    residual = 0
     return residual
 
 
