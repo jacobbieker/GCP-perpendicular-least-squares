@@ -3,6 +3,7 @@ import os, sys, random
 import numpy
 from multiprocessing import Pool
 from astropy.io import fits
+from pyraf import iraf
 
 # Fit plane or line iteratively
 #   if more than one cluster, each cluster in separate STSDAS table
@@ -75,7 +76,7 @@ def min_delta(filename, percentage):
             absolute_residual = abs(residual)
             absolute_residuals.append(absolute_residual)
         delta = numpy.mean(absolute_residuals)
-        #TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
+        #TODO calculate sqrt( (iraf.tstat.nrows-1.)/(iraf.tstat.nrows-3.) )
         rms = numpy.std(absolute_residuals) * numpy.sqrt
         return 0
     elif percentage == 60:
@@ -85,7 +86,7 @@ def min_delta(filename, percentage):
 def min_rms(filename, percentage):
     if percentage == 100:
         residuals = fits.getdata(filename=filename, extname="residual")
-        #TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
+        #TODO calculate sqrt( (iraf.tstat.nrows-1.)/(iraf.tstat.nrows-3.) )
         rms = numpy.std(residuals) * numpy.sqrt
         return 0
     elif percentage == 60:
