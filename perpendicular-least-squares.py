@@ -92,7 +92,7 @@ def min_rms(filename, percentage):
         return 0
 
 
-def zeropoint(filename, cluster, type_solution, res_choice):
+def zeropoint(filename, cluster, type_solution, res_choice, y_col, x1_col, x2_col):
     """
     # derive the zero points and calculate the residuals
 # the zero points are median or mean as defined by n_zeropoint
