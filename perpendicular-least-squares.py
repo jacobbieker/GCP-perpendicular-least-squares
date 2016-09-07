@@ -3,7 +3,6 @@ import os, sys, random
 import numpy
 from multiprocessing import Pool
 from astropy.io import fits
-from pyraf import iraf
 
 # Fit plane or line iteratively
 #   if more than one cluster, each cluster in separate STSDAS table
@@ -76,8 +75,8 @@ def min_delta(filename, percentage):
             absolute_residual = abs(residual)
             absolute_residuals.append(absolute_residual)
         delta = numpy.mean(absolute_residuals)
-        #TODO calculate sqrt( (iraf.tstat.nrows-1.)/(iraf.tstat.nrows-3.) )
-        rms = numpy.std(absolute_residuals) * numpy.sqrt
+        #TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
+        rms = numpy.std(absolute_residuals) * numpy.sqrt((len(absolute_residuals) - 1) / (len(absolute_residuals) - 3))
         return 0
     elif percentage == 60:
         return 0
@@ -93,7 +92,7 @@ def min_rms(filename, percentage):
         return 0
 
 
-def zeropoint(cluster, type_solution):
+def zeropoint(filename, cluster, type_solution, res_choice):
     """
     # derive the zero points and calculate the residuals
 # the zero points are median or mean as defined by n_zeropoint
@@ -152,6 +151,9 @@ for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
         # expression "//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//"
         # n_recol = y1, n_Iecol = x2_col, n_sigcol = x1_col
         #TODO: Get the columns from the FITS file for the expression
+        n_recol = fits.getdata(filename=filename, extname=y_col)
+        n_Iecol = fits.getdata(filename=filename, extname=x2_col)
+        n_sigcol = fits.getdata(filename=filename, extname=x1_col)
         expression = y_col - a_factor * x1_col - b_factor * x2_col
         zeropoint_dict["z"+str(index)] = expression
         # n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
@@ -253,6 +255,7 @@ def determine_uncertainty(solutions):
     return 0
 
 if __name__ == "__main__":
+    '''
     filename = str(input("Enter the filename containing the cluster(s): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
@@ -289,6 +292,8 @@ if __name__ == "__main__":
 
     print(hdulist[1].data.columns)
     #print(hdulist[1].data)
+    '''
+    min_delta(filename="rxj1226allfit.fits", percentage=100)
 
 
 
