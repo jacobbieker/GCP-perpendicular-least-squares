@@ -85,8 +85,7 @@ def min_delta(filename, percentage):
 def min_rms(filename, percentage):
     if percentage == 100:
         residuals = fits.getdata(filename=filename, extname="residual")
-        #TODO calculate sqrt( (iraf.tstat.nrows-1.)/(iraf.tstat.nrows-3.) )
-        rms = numpy.std(residuals) * numpy.sqrt
+        rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
         return 0
     elif percentage == 60:
         return 0
@@ -184,10 +183,10 @@ def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     :param n_norm:
     :return:
     '''
-    expression = (zeropoint_dict[cluster_number] - n_zero)# * (nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
-    # TODO: tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3")
+    expression = ((zeropoint_dict[cluster_number] - n_zero) * (nclus=="//n_i//"))/ n_norm + 1000.0 * (nclus!="//n_i//")
+    # TODO: tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3") This seems to put the result into the residual, numbered by the cluster number, so neeed to add "residuals" thing
     expression = #"res+((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm
-
+    # TODO: next tcalc puts it in the general residual line, so that is used the most
     residual = 0
     return residual
 
@@ -206,6 +205,7 @@ def residuals_y():
 def residuals_x1():
     # The calculated residuals go into the "res" column
     return 0
+
 
 
 def residuals_x2():
@@ -255,7 +255,7 @@ def determine_uncertainty(solutions):
     return 0
 
 if __name__ == "__main__":
-    '''
+
     filename = str(input("Enter the filename containing the cluster(s): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
@@ -292,8 +292,7 @@ if __name__ == "__main__":
 
     print(hdulist[1].data.columns)
     #print(hdulist[1].data)
-    '''
-    min_delta(filename="rxj1226allfit.fits", percentage=100)
+    #min_delta(filename="rxj1226allfit.fits", percentage=100)
 
 
 
