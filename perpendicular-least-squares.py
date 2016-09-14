@@ -1,7 +1,7 @@
 __author__ = 'Jacob Bieker'
 import os, sys, random
 import numpy
-from multiprocessing import Pool
+from astropy.table import Table
 from astropy.io import fits
 
 # Fit plane or line iteratively
@@ -183,7 +183,7 @@ def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     :param n_norm:
     :return:
     '''
-    expression = ((zeropoint_dict[cluster_number] - n_zero) * (nclus=="//n_i//"))/ n_norm + 1000.0 * (nclus!="//n_i//")
+    expression = ((zeropoint_dict[cluster_number] - n_zero) * (fits_data[cluster_number])/ n_norm + 1000.0 * (nclus!="//n_i//")
     # TODO: tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3") This seems to put the result into the residual, numbered by the cluster number, so neeed to add "residuals" thing
     expression = #"res+((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm
     # TODO: next tcalc puts it in the general residual line, so that is used the most
@@ -278,6 +278,7 @@ if __name__ == "__main__":
     hdulist = fits.open(filename)
     print(hdulist.info())
     print(hdulist[1].dump(datafile="comafit.txt", cdfile="comacolumn.txt", hfile="comaheader.txt", clobber=True))
+    fits_data = hdulist[1]
     list_temp = tables.split(" ")
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
