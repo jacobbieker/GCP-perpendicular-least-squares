@@ -4,6 +4,7 @@ import numpy
 from astropy.table import Table
 from astropy.io import fits
 
+
 # Fit plane or line iteratively
 #   if more than one cluster, each cluster in separate STSDAS table
 #
@@ -53,7 +54,7 @@ from astropy.io import fits
 def random_number(number, seed, nboot):
     rand_nums = []
     if seed <= 0 or seed <= nboot:
-        seed = max(seed*seed, (seed+1)*(nboot+1))
+        seed = max(seed * seed, (seed + 1) * (nboot + 1))
     elif seed > 0:
         seed = -seed
     random.seed(a=seed)
@@ -75,7 +76,7 @@ def min_delta(filename, percentage):
             absolute_residual = abs(residual)
             absolute_residuals.append(absolute_residual)
         delta = numpy.mean(absolute_residuals)
-        #TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
+        # TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
         rms = numpy.std(absolute_residuals) * numpy.sqrt((len(absolute_residuals) - 1) / (len(absolute_residuals) - 3))
         return 0
     elif percentage == 60:
@@ -93,71 +94,79 @@ def min_rms(filename, percentage):
 
 def zeropoint(filename, cluster, type_solution, res_choice, y_col, x1_col, x2_col):
     """
+
+    tcalc(tmpall,"res","0.",colfmt="f6.3")
     # derive the zero points and calculate the residuals
-# the zero points are median or mean as defined by n_zeropoint
-n_norm=1.                         # min in y
-if(n_resalgo=="per")
-  n_norm=sqrt(1.+n_a**2+n_b**2)   # min perpendicular
-if(n_resalgo=="x1")
-  n_norm=-1.*n_a                  # min in x1
-if(n_resalgo=="x2")
-  n_norm=-1.*n_b                  # min in x2
+    # the zero points are median or mean as defined by n_zeropoint
+    n_norm=1.                         # min in y
+    if(n_resalgo=="per")
+      n_norm=sqrt(1.+n_a**2+n_b**2)   # min perpendicular
+    if(n_resalgo=="x1")
+      n_norm=-1.*n_a                  # min in x1
+    if(n_resalgo=="x2")
+      n_norm=-1.*n_b                  # min in x2
 
-tcalc(tmpall,"res","0.",colfmt="f6.3")
+    tcalc(tmpall,"res","0.",colfmt="f6.3")
 
-for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
-# delta y
- n_expression = "("//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//")"
- print(n_expression, > tmpexp)
- tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
- delete(tmpexp,verify=no)
- n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
- print(n_expression, >tmpexp)
- tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
- delete(tmpexp,verify=no)
- tstat(tmpall,"z"//n_i,lowlim=INDEF,highlim=100., >> "/dev/null")
- if(n_zeropoint=="median")
-   n_zero=tstat.median
- else
-   n_zero=tstat.mean
-# printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
-# residuals normalized
- n_expression="((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
- print(n_expression, > tmpexp)
- tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3")
- delete(tmpexp,verify=no)
- n_expression="res+((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm
- print(n_expression, > tmpexp)
- tcalc(tmpall,"res","@"//tmpexp,colfmt="f6.3"
- delete(tmpexp,verify=no)
-}
+    for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
+    # delta y
+     n_expression = "("//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//")"
+     print(n_expression, > tmpexp)
+     tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
+     delete(tmpexp,verify=no)
+     n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
+     print(n_expression, >tmpexp)
+     tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
+     delete(tmpexp,verify=no)
+     tstat(tmpall,"z"//n_i,lowlim=INDEF,highlim=100., >> "/dev/null")
+     if(n_zeropoint=="median")
+       n_zero=tstat.median
+     else
+       n_zero=tstat.mean
+    # printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
+    # residuals normalized
+     n_expression="((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
+     print(n_expression, > tmpexp)
+     tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3")
+     delete(tmpexp,verify=no)
+     n_expression="res+((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm
+     print(n_expression, > tmpexp)
+     tcalc(tmpall,"res","@"//tmpexp,colfmt="f6.3"
+     delete(tmpexp,verify=no)
+    }
 
     RMA coefficients: a_factor, b_factor
     :param cluster:
     :param type_solution:
     :return:
     """
-    n_norm=1.                         # min in y
-    if res_choice=="per":
-        n_norm=numpy.sqrt(1.0+a_factor**2+b_factor**2)   # min perpendicular
-    if res_choice=="x1":
-        n_norm=-1.0*a_factor                  # min in x1
-    if res_choice=="x2":
-        n_norm=-1.0*b_factor         # min in x2
+
+    # Adds a column full of zeros to the FITS table for use in residual
+    residual_column = fits.Column(name='res', format='f6.3', array=0)
+    fits_table.add_column(residual_column)
+
+    n_norm = 1.  # min in y
+    if res_choice == "per":
+        n_norm = numpy.sqrt(1.0 + a_factor ** 2 + b_factor ** 2)  # min perpendicular
+    if res_choice == "x1":
+        n_norm = -1.0 * a_factor  # min in x1
+    if res_choice == "x2":
+        n_norm = -1.0 * b_factor  # min in x2
 
     for index, galaxy in enumerate(cluster):
         zeropoint_dict = {}
         # expression "//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//"
         # n_recol = y1, n_Iecol = x2_col, n_sigcol = x1_col
-        #TODO: Get the columns from the FITS file for the expression
+        # TODO: Get the columns from the FITS file for the expression
         n_recol = fits.getdata(filename=filename, extname=y_col)
         n_Iecol = fits.getdata(filename=filename, extname=x2_col)
         n_sigcol = fits.getdata(filename=filename, extname=x1_col)
         expression = y_col - a_factor * x1_col - b_factor * x2_col
-        zeropoint_dict["z"+str(index)] = expression
+        zeropoint_dict["z" + str(index)] = expression
         # n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
-        expression = zeropoint_dict["z"+str(index)] # * (number of cluster == index) + 1000.0 * (number of cluser not equal to index
-        zeropoint_dict["z"+str(index)] = expression
+        expression = zeropoint_dict[
+            "z" + str(index)]  # * (number of cluster == index) + 1000.0 * (number of cluser not equal to index
+        zeropoint_dict["z" + str(index)] = expression
         # Ignore z values that are above 100.0
         if type_solution.lower() == "median":
             # use with delta and quartile
@@ -169,6 +178,7 @@ for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
             # printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
             # residuals normalized
         residuals(n_norm, index, n_zero, zeropoint_dict)
+
 
 def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     '''
@@ -183,17 +193,29 @@ def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     :param n_norm:
     :return:
     '''
-    expression = ((zeropoint_dict[cluster_number] - n_zero) * (fits_data[cluster_number])/ n_norm + 1000.0 * (nclus!="//n_i//")
+    non_cluster_residual = fits_table[:cluster_number] + fits_table[
+                                                         cluster_number + 1:]  # Potentially works, if it is a list
+    residual_data = ((zeropoint_dict[cluster_number] - n_zero) * (
+    fits_table[cluster_number])) / n_norm + 1000.0 * non_cluster_residual
+    # fits_data[nclud] gets row, if that's what needed
+    residual_number_col = fits.Column(name='r' + str(cluster_number), format='f6.3', array=residual_data)
     # TODO: tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3") This seems to put the result into the residual, numbered by the cluster number, so neeed to add "residuals" thing
-    expression = #"res+((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm
+    res_zeropoint = fits_table['res'] + ((zeropoint_dict[cluster_number] - n_zero) * (
+    fits_table[cluster_number])) / n_norm
     # TODO: next tcalc puts it in the general residual line, so that is used the most
+    residual_number_all = fits.Column(name='res', format='f6.3', array=residual_data)
+    # new_columns = fits.ColDefs([residual_number_col, residual_number_all])
+    # new_table_hdu = fits.new_table(hdulist.columns + new_columns)
+    fits_table.add_column(residual_number_col)
+    fits_table.add_column(residual_number_all)
     residual = 0
     return residual
 
 
-def residuals_perpendicular():
+def residuals_perpendicular(y, x1, x2, ):
+    n_norm = numpy.sqrt(1.0 + n_a ** 2 + n_b ** 2)
     # TODO: Convert delta = (y - a*x1 - b*x2 - c)/sqrt(1+a^2+b^2)
-    return 0
+    return n_norm
 
 
 def residuals_y():
@@ -205,7 +227,6 @@ def residuals_y():
 def residuals_x1():
     # The calculated residuals go into the "res" column
     return 0
-
 
 
 def residuals_x2():
@@ -242,7 +263,7 @@ def check_guess(cluster, type_solution, guess):
         return 0
     elif type_solution == "plane":
         return 0
-    # TODO: check guess with another cluster
+        # TODO: check guess with another cluster
 
 
 def bootstrap_cluster(cluster, nboot):
@@ -253,6 +274,7 @@ def bootstrap_cluster(cluster, nboot):
 def determine_uncertainty(solutions):
     # TODO: Take a list or dict of solutions and determine the uncertainty in them
     return 0
+
 
 if __name__ == "__main__":
 
@@ -283,6 +305,7 @@ if __name__ == "__main__":
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
     print(random_numbers)
+    fits_table = Table.read(filename, format="fits")
     # Checks for which variables and functions to call
     if not x2_col:
         # Only use two parameters
@@ -292,9 +315,5 @@ if __name__ == "__main__":
         plane_solve()
 
     print(hdulist[1].data.columns)
-    #print(hdulist[1].data)
-    #min_delta(filename="rxj1226allfit.fits", percentage=100)
-
-
-
-
+    # print(hdulist[1].data)
+    # min_delta(filename="rxj1226allfit.fits", percentage=100)
