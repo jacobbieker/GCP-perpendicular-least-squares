@@ -92,10 +92,9 @@ def min_rms(filename, percentage):
         return 0
 
 
-def zeropoint(filename, cluster, type_solution, res_choice, y_col, x1_col, x2_col):
+def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor):
     """
 
-    tcalc(tmpall,"res","0.",colfmt="f6.3")
     # derive the zero points and calculate the residuals
     # the zero points are median or mean as defined by n_zeropoint
     n_norm=1.                         # min in y
@@ -157,16 +156,14 @@ def zeropoint(filename, cluster, type_solution, res_choice, y_col, x1_col, x2_co
         zeropoint_dict = {}
         # expression "//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//"
         # n_recol = y1, n_Iecol = x2_col, n_sigcol = x1_col
-        # TODO: Get the columns from the FITS file for the expression
-        n_recol = fits.getdata(filename=filename, extname=y_col)
-        n_Iecol = fits.getdata(filename=filename, extname=x2_col)
-        n_sigcol = fits.getdata(filename=filename, extname=x1_col)
-        expression = y_col - a_factor * x1_col - b_factor * x2_col
+        n_recol = fits_table[y_col]
+        n_Iecol = fits_table[x2_col]
+        n_sigcol = fits_table[x1_col]
+        expression = n_recol - a_factor * n_sigcol - b_factor * n_Iecol
         zeropoint_dict["z" + str(index)] = expression
-        # n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
-        expression = zeropoint_dict[
-            "z" + str(index)]  # * (number of cluster == index) + 1000.0 * (number of cluser not equal to index
-        zeropoint_dict["z" + str(index)] = expression
+        non_cluster_residual = fits_table[:index] + fits_table[
+                                                         index + 1:]  # Potentially works, if it is a list
+        zeropoint_dict["z" + str(index)] = ((zeropoint_dict["z" + str(index)]) * (fits_table[index])) + 1000.0 * non_cluster_residual
         # Ignore z values that are above 100.0
         if type_solution.lower() == "median":
             # use with delta and quartile
@@ -208,8 +205,16 @@ def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     # new_table_hdu = fits.new_table(hdulist.columns + new_columns)
     fits_table.add_column(residual_number_col)
     fits_table.add_column(residual_number_all)
-    residual = 0
-    return residual
+    # Debug stuff
+
+    print("\n\n\n---------- Residual Things-----------\n")
+    print("Table Res\n")
+    print(fits_table['res'])
+    print("Table r<Cluster Number>\n")
+    print(fits_table[cluster_number])
+    print("\n\n\n---------- Residual Things-----------\n\n\n\n")
+    status = 0
+    return status
 
 
 def residuals_perpendicular(y, x1, x2, ):
