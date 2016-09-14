@@ -65,8 +65,19 @@ def random_number(number, seed, nboot):
     return rand_nums
 
 
-def min_quartile(cluster):
-    return 0
+def min_quartile(total_galaxies):
+    fits_table.sort("residual")
+    low_num = total_galaxies / 4.0
+    high_num = 3.0 * total_galaxies / 4.0
+    fits_residual = fits_table.field("residual")
+    very_low_num = fits_residual[int(low_num - 0.5)]
+    tab_value = fits_residual[int(low_num + 0.5)]
+    very_low_num = (very_low_num + tab_value) * 2.0
+    very_high_num = fits_residual[int(high_num -0.5)]
+    tab_value = fits_residual[int(high_num + 0.5)]
+    very_high_num = (very_high_num + tab_value) * 2.0
+    delta = very_high_num - very_low_num
+    return delta
 
 
 def min_delta(percentage, total_galaxies):
