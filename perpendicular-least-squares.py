@@ -69,19 +69,23 @@ def min_quartile(cluster):
     return 0
 
 
-def min_delta(filename, percentage):
+def min_delta(percentage, total_galaxies):
+    residuals = fits_table.field("residual")
+    absolute_residuals = []
+    for residual in residuals:
+        absolute_residual = abs(residual)
+        absolute_residuals.append(absolute_residual)
     if percentage == 100:
-        residuals = fits_table.field("residual")
-        absolute_residuals = []
-        for residual in residuals:
-            absolute_residual = abs(residual)
-            absolute_residuals.append(absolute_residual)
         delta = numpy.mean(absolute_residuals)
-        # TODO calculate sqrt( (tstat.nrows-1.)/(tstat.nrows-3.) )
-        rms = numpy.std(absolute_residuals) * numpy.sqrt((len(absolute_residuals) - 1) / (len(absolute_residuals) - 3))
-        return 0
+        rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
+        return rms
     elif percentage == 60:
-        return 0
+        high_num = total_galaxies * 0.6 + 0.5
+        absolute_residuals_60 = absolute_residuals[:int(high_num)]
+        residuals_60 = residuals[:int(high_num)]
+        delta = numpy.mean(absolute_residuals_60)
+        rms = numpy.std(residuals_60)*numpy.sqrt((len(residuals_60) - 1) / (len(residuals_60) - 3))
+        return rms
 
 
 def min_rms(percentage):
