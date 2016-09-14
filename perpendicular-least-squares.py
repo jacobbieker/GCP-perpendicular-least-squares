@@ -71,7 +71,7 @@ def min_quartile(cluster):
 
 def min_delta(filename, percentage):
     if percentage == 100:
-        residuals = fits.getdata(filename=filename, extname="residual")
+        residuals = fits_table.field("residual")
         absolute_residuals = []
         for residual in residuals:
             absolute_residual = abs(residual)
@@ -84,13 +84,17 @@ def min_delta(filename, percentage):
         return 0
 
 
-def min_rms(filename, percentage):
+def min_rms(percentage):
+    residuals = fits_table.field("residual")
     if percentage == 100:
-        residuals = fits.getdata(filename=filename, extname="residual")
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
-        return 0
+        return rms
     elif percentage == 60:
-        return 0
+        lower_num = 0.2 * len(residuals) + 0.5
+        higher_num = 0.8 + len(residuals) + 0.5
+        residuals_60 = residuals[int(lower_num):int(higher_num)]
+        rms = numpy.std(residuals_60)*numpy.sqrt((len(residuals_60) - 1.0) / (len(residuals_60) - 3.0))
+        return rms
 
 
 def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor):
