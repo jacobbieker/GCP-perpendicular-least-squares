@@ -3,6 +3,7 @@ import os, sys, random
 import numpy
 from astropy.table import Table
 from astropy.io import fits
+import copy
 
 
 # Fit plane or line iteratively
@@ -165,12 +166,14 @@ def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_facto
                                                          index + 1:]  # Potentially works, if it is a list
         zeropoint_dict["z" + str(index)] = ((zeropoint_dict["z" + str(index)]) * (fits_table[index])) + 1000.0 * non_cluster_residual
         # Ignore z values that are above 100.0
+        temp_zeropoint_dict = copy.deepcopy(zeropoint_dict)
+        temp_zeropoint_dict[x > 100.0] = float("NaN")
         if type_solution.lower() == "median":
             # use with delta and quartile
-            n_zero = numpy.median(zeropoint_dict)
+            n_zero = numpy.nanmedian(temp_zeropoint_dict)
         elif type_solution.lower() == "mean":
             # use with rms
-            n_zero = numpy.mean(zeropoint_dict)
+            n_zero = numpy.nanmean(temp_zeropoint_dict)
 
             # printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
             # residuals normalized
