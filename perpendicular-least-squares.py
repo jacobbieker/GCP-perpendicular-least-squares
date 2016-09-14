@@ -89,14 +89,14 @@ def min_delta(percentage, total_galaxies):
     if percentage == 100:
         delta = numpy.mean(absolute_residuals)
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
-        return rms
+        return rms, delta
     elif percentage == 60:
         high_num = total_galaxies * 0.6 + 0.5
         absolute_residuals_60 = absolute_residuals[:int(high_num)]
         residuals_60 = residuals[:int(high_num)]
         delta = numpy.mean(absolute_residuals_60)
         rms = numpy.std(residuals_60)*numpy.sqrt((len(residuals_60) - 1) / (len(residuals_60) - 3))
-        return rms
+        return rms, delta
 
 
 def min_rms(percentage):
@@ -237,28 +237,6 @@ def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     print("\n\n\n---------- Residual Things-----------\n\n\n\n")
     status = 0
     return status
-
-
-def residuals_perpendicular(y, x1, x2, ):
-    n_norm = numpy.sqrt(1.0 + n_a ** 2 + n_b ** 2)
-    # TODO: Convert delta = (y - a*x1 - b*x2 - c)/sqrt(1+a^2+b^2)
-    return n_norm
-
-
-def residuals_y():
-    # TODO: Convert: delta = (y - a*x1 - b*x2 - c)
-    # The calculated residuals go into the "res" column
-    return 0
-
-
-def residuals_x1():
-    # The calculated residuals go into the "res" column
-    return 0
-
-
-def residuals_x2():
-    # The calculated residuals go into the "res" column
-    return 0
 
 
 def line_solve():
