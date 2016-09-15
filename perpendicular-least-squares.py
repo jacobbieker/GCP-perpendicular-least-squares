@@ -1,7 +1,7 @@
 __author__ = 'Jacob Bieker'
 import os, sys, random
 import numpy
-from astropy.table import Table
+from astropy.table import Table, vstack
 from astropy.io import fits
 import copy
 
@@ -249,9 +249,39 @@ def plane_solve():
     return 0
 
 
-def read_clusters(fits_file):
-    # TODO: Read in the files containing the cluster points
-    return 0
+def read_clusters(filename, table_list, galaxy_name, group_name, y_col, x1_col, x2_col):
+    '''
+    Reads in the FITS file and creates one table from the different tables and counts the
+    total number of galaxies, for use later
+    :param filename: Name of the FITS file
+    :param table_list:
+    :param galaxy_name: Column name for the galaxy
+    :param group_name: Column name for the group
+    :param y_col: Column name for y
+    :param x1_col: Column name for x1
+    :param x2_col: Column name for x2 (optional)
+    :return: The entire dataset in one table, with cluster number added to the data, and the total number
+    of galaxies
+    '''
+    cluster_number = 0
+    hdu_num = 0
+    finished_table = Table()
+    while (True):
+        try:
+            table = Table.read(filename, format="fits", hdu=hdu_num)
+            cluster_number += 1
+            hdu_num += 1
+            if x2_col != "":
+                new_table = Table(table, names=(galaxy_name, group_name, y_col, x1_col, x2_col))
+            else:
+                new_table = Table(table, names=(galaxy_name, group_name, y_col, x1_col))
+            cluster_num_column = fits.Column(cluster_number, name="cluster_number")
+            new_table.add_column(cluster_num_column)
+            finished_table = vstack(finished_table, new_table)
+        except:
+            break
+    total_galaxies = len(finished_table)
+    return finished_table, total_galaxies
 
 
 def initial_guess(largest_cluster, type_solution):
@@ -289,7 +319,7 @@ if __name__ == "__main__":
     res_choice = str(input("Residual to minimize (per,y,x1,x2): ")).strip() or "per"
     y_col = str(input("Column name for y: ")).strip() or "lre_GR_sc"
     x1_col = str(input("Column name for x1: ")).strip() or "lsig_re"
-    x2_col = str(input("Column name for x2 (optional): ")).strip()
+    x2_col = str(input("Column name for x2 (optional): ")).strip() or ""
     zeropoint_choice = input("Zeropoints (median, mean): ") or "median"
     galaxy_name = str(input("Column name for galaxy: ")).strip()
     group_name = str(input("Column name for group: ")).strip()
@@ -310,7 +340,7 @@ if __name__ == "__main__":
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
     print(random_numbers)
-    fits_table = Table.read(filename, format="fits")
+    fits_table = read_clusters(filename)
     # Checks for which variables and functions to call
     if not x2_col:
         # Only use two parameters
