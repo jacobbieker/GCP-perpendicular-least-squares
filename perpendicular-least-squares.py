@@ -255,7 +255,42 @@ def check_guess(cluster, type_solution, guess):
         # TODO: check guess with another cluster
 
 
-def bootstrap_cluster(cluster, nboot):
+def bootstrap_initial(num_bootstrap):
+    flow_boot = False
+    if num_bootstrap > 0:
+        total_boot = num_bootstrap
+        ssa = 0
+        sa = 0
+        ssb = 0
+        sb = 0
+
+
+def bootstrap_cluster():
+    # Fit cluser with the most data to get an idea of where to iterate from
+    '''
+    for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
+ tstat(tmpall,"nclus",lowlim=n_i,highlim=n_i, >> "/dev/null")
+    :param cluster:
+    :param num_bootstrap:
+    :return:
+    '''
+    rich_cluster = 0
+    rich_members = 0
+    cluster_table = fits_table.group_by('cluster_number')
+    # Selects all the rows with the same cluster number and counts them to figure out which has the most
+    for key, group in zip(cluster_table.groups.keys, cluster_table.groups):
+        if len(group) > rich_members:
+            rich_members = len(group)
+            rich_cluster = key['cluster_number']
+
+    # Fitting cluster to get rid of any NaN points
+    if solve_plane:
+
+
+
+
+
+
     # TODO: bootstrap a cluster to get a different distribution to check with check_guess
     return 0
 
@@ -308,8 +343,11 @@ def change_coefficients():
 def restart():
     return 0
 
+
 def next_res():
+    # TODO Use to restart process again?
     return 0
+
 
 def determine_change_coefficients(a_iterations, b_iterations, a_in, b_in, delta_in, very_low_in, very_high_in, minimization_algorithm):
     if a_iterations == 1 and b_iterations == 1:
@@ -384,7 +422,7 @@ if __name__ == "__main__":
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
     print(random_numbers)
-    fits_table = read_clusters(filename)
+    fits_table, total_galaxies = read_clusters(filename)
     # Checks for which variables and functions to call
     if not x2_col:
         # Only use two parameters
