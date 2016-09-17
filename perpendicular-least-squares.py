@@ -285,10 +285,31 @@ def bootstrap_cluster():
 
     # Fitting cluster to get rid of any NaN points
     if solve_plane:
+        '''
+    tselect(tmpall,tmpsel,"nclus=="//n_rich//" && "//n_recol//"<99999. && "//n_sigcol//"<99999.")
+    else
+        tselect(tmpall,tmpsel,"nclus=="//n_rich//" && "//n_recol//"<99999. && "//n_sigcol//"<99999. && "//n_Iecol//"<99999.")
+    tinfo(tmpsel,ttout-)
+    if(n_flprint)
+      printf("Number of galaxies fit in this cluster:  %3d\n",tinfo.nrows)
+    tfitlin(tmpsel,n_recol,n_sigcol,n_Iecol,rows="-",verbose=no, > tmpout)
+        # get the RMA coefficients
+        '''
+    if res_choice == "y":
+        return 0
+        # Guess: Gets the data from columns 3 and 4 from tfitlin and takes the value on the 6th line
+       # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
+        # scan(n_a,n_b)
+    else:
+        return 0
+        # Takes the 2nd and third column and takes the last 3rd line from the bottom?
+        # tail(tmpout,nlines=3) | fields("STDIN","2-3",lines="1") | \ scan(n_a, n_b)
+    if solve_plane:
+        b_in = 0.0
 
-
-
-
+    if solve_plane:
+        # If two parameter fit make the face zero column
+        fits_table[x2_col] = 0.0
 
 
     # TODO: bootstrap a cluster to get a different distribution to check with check_guess
@@ -300,7 +321,7 @@ def determine_uncertainty(solutions):
     return 0
 
 
-def change_coefficients():
+def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor, flow_print, flow_a, flow_b):
     m_a = a_factor_in / 200.0
     m_b = b_factor_in / 200.0
     if (a_factor <= m_a or a_iterations > max_iterations) and ((b_factor <= m_b or b_iterations > max_iterations) or solve_plane ) or ( a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations ):
@@ -349,7 +370,7 @@ def next_res():
     return 0
 
 
-def determine_change_coefficients(a_iterations, b_iterations, a_in, b_in, delta_in, very_low_in, very_high_in, minimization_algorithm):
+def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta_in, sig_a, sig_b, very_low_in, very_high_in, minimization_algorithm, flow_a, flow_b,):
     if a_iterations == 1 and b_iterations == 1:
         a_out = a_in
         b_out = b_in
@@ -394,6 +415,19 @@ def determine_change_coefficients(a_iterations, b_iterations, a_in, b_in, delta_
 
 
 if __name__ == "__main__":
+
+    a_factor = 0
+    b_factor = 0
+    sig_a = 0
+    sig_b = 0
+    a_factor_in = 0
+    b_factor_in = 0
+    a_iterations = 0
+    b_iterations = 0
+    max_iterations = 0
+    a_out = 0
+    b_out = 0
+    restart_factor = False
 
     filename = str(input("Enter the filename containing the cluster(s): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
