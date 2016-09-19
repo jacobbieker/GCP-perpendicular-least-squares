@@ -296,14 +296,12 @@ def bootstrap_cluster():
         # get the RMA coefficients
         '''
     if res_choice == "y":
-        return 0
         # On the 6th line from tfitlin, which goes to STDIN, fields takes the 3rd and 4th whitespace
         # separated values in line 6
         # Scan scans in those values into n_a and n_b
        # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
         # scan(n_a,n_b)
     else:
-        return 0
         # On the 3rd to last line from tfitlin, which goes to STDIN, fields takes the 2nd and 3rd whitespace
         # separated values
         # tail(tmpout,nlines=3) | fields("STDIN","2-3",lines="1") | \ scan(n_a, n_b)
