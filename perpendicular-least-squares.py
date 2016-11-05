@@ -4,6 +4,9 @@ import numpy
 from astropy.table import Table, vstack
 from astropy.io import fits
 import copy
+import scipy.odr as odr
+from scipy.stats import linregress
+from statsmodels.formula.api import ols
 
 
 # Fit plane or line iteratively
@@ -413,6 +416,69 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
                 if flow_b and b_iterations > 1:
                     b_factor /= 2.0
                 change_coefficients()
+
+
+def tfitlin(table):
+    # Fit line or plane by 3 or 4 different methods
+    #
+    # Fit:  y = a1*x+b
+    #       y = a1*x+a2*x+b
+    #
+    # Methods: Minimizing the residuals in y
+    #          Minimizing the residuals in x1
+    #          Minimizing the residuals in x2 (for plane)
+    #          Reduced major axis method
+    #              a=(a1*a2)**0.5   b=(b1*b2)**0.5  (line)
+    #              a1=(a1_1*a1_2*a1_3)**(1/3)       (plane)
+    #              a2=(a2_1*a2_2*a2_3)**(1/3)       (plane)
+    #              b=(b1*b2*b3)**(1/3)              (plane)
+    #
+    # =====> No weighting <========
+    #
+    # Packages used: noao, proto, testphot ttoolsx
+    # Fortran program: fitplan    This is where the job is done!
+    #
+    # Version: 13.03.92  IRAF 2.9 sun/mira
+    #          12.01.93  iraf 2.10 mira/sun
+    #          16.10.95  Solaris roeskva
+    #          30.03.04  Changed to use redhat binary, works under IRAF 2.12.2 Redhat 9.0
+    #          19.05.08  moved to Mac OS freja, changed to use /Users/inger/bin path
+    #          30.11.16  Moved to Python, Jacob Bieker
+    # Inger Jorgensen, Gemini Observatory
+    # e-mail: ijorgensen@gemini.edu
+
+    def f(B, x):
+        '''Linear function y = m*x + b'''
+        # B is a vector of the parameters.
+        # x is an array of the current x values.
+        # x is in the same format as the x passed to Data or RealData.
+        #
+        # Return an array in the same format as y passed to Data or RealData.
+        return B[0]*x + B[1]
+
+    def f3(B, x):
+        return B[0]*x + B[1]*x +B[2]
+
+    intable = str(input("Input Table: "))
+    y_col = str(input("Y column name, log r") or "logre_r")
+    x1_col = str(input("X1 column name, log sigma") or "logsig_lit")
+    x2_col = str(input("X2 column name, surface brightness") or "<mu_r>e")
+    rows = str(input("Rows: ") or "")
+    verbose = bool(input("Verbose") or False)
+
+    if not solve_plane:
+        x = table[0]
+        y = table[1]
+        guess = linregress(x, y)
+        mod = odr.Model(f)
+        dat = odr.Data(x, y)
+        od = odr.ODR(dat, mod, beta0=guess[0:2])
+        out = od.run()
+    else:
+        # For the three dimensional case, the y has to be a matrix for lstsq to work
+        x = table[0]
+        y = table[1]
+        guess = numpy.lstsq(x, y)
 
 
 if __name__ == "__main__":
