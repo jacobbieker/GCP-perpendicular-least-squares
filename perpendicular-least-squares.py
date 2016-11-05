@@ -7,6 +7,7 @@ import copy
 import scipy.odr as odr
 from scipy.stats import linregress
 from statsmodels.formula.api import ols
+import statsmodels.api as sm
 
 
 # Fit plane or line iteratively
@@ -466,19 +467,30 @@ def tfitlin(table):
     rows = str(input("Rows: ") or "")
     verbose = bool(input("Verbose") or False)
 
+    if rows == "":
+        data = table[y_col, x1_col, x2_col]
+    else:
+        data = table[y_col, x1_col, x2_col][rows]
+
     if not solve_plane:
-        x = table[0]
-        y = table[1]
+        x = data[x1_col]
+        y = data[y_col]
         guess = linregress(x, y)
         mod = odr.Model(f)
         dat = odr.Data(x, y)
         od = odr.ODR(dat, mod, beta0=guess[0:2])
         out = od.run()
+        return out
     else:
         # For the three dimensional case, the y has to be a matrix for lstsq to work
-        x = table[0]
-        y = table[1]
-        guess = numpy.lstsq(x, y)
+        x = data[x1_col, x2_col].to_pandas()
+        y = data[y_col]
+        guess = numpy.linalg.lstsq(x, y)
+        mod = odr.Model(f3)
+        dat = odr.Data(x, y)
+        od = odr.ODR(dat, mod, beta0=guess[0:3])
+        out = od.run()
+        return out
 
 
 if __name__ == "__main__":
@@ -515,24 +527,17 @@ if __name__ == "__main__":
     rand_num = int(input("Number of random numbers: ") or 1)
 
     # preprocess input
-    hdulist = fits.open(filename)
-    print(hdulist.info())
-    print(hdulist[1].dump(datafile="comafit.txt", cdfile="comacolumn.txt", hfile="comaheader.txt", clobber=True))
-    fits_data = hdulist[1]
     list_temp = tables.split(" ")
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
     print(random_numbers)
-    fits_table, total_galaxies = read_clusters(filename)
     # Checks for which variables and functions to call
     if not x2_col:
         # Only use two parameters
         factor_change_b = 0.0
         solve_plane = False
-        line_solve()
     else:
-        plane_solve()
+        solve_plane = True
 
-    print(hdulist[1].data.columns)
-    # print(hdulist[1].data)
+    fits_table, total_galaxies = read_clusters(filename, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col)
     # min_delta(filename="rxj1226allfit.fits", percentage=100)
