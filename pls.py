@@ -1,7 +1,7 @@
 __author__ = 'Jacob Bieker'
 import os, sys, random
 import numpy
-from astropy.table import Table, vstack, Column, pprint
+from astropy.table import Table, vstack, Column, pprint, TableColumns
 from astropy.io import fits
 import copy
 import scipy.odr as odr
@@ -77,7 +77,7 @@ def min_quartile(total_galaxies):
     very_low_num = fits_residual[int(low_num - 0.5)]
     tab_value = fits_residual[int(low_num + 0.5)]
     very_low_num = (very_low_num + tab_value) * 2.0
-    very_high_num = fits_residual[int(high_num -0.5)]
+    very_high_num = fits_residual[int(high_num - 0.5)]
     tab_value = fits_residual[int(high_num + 0.5)]
     very_high_num = (very_high_num + tab_value) * 2.0
     delta = very_high_num - very_low_num
@@ -99,7 +99,7 @@ def min_delta(percentage, total_galaxies):
         absolute_residuals_60 = absolute_residuals[:int(high_num)]
         residuals_60 = residuals[:int(high_num)]
         delta = numpy.mean(absolute_residuals_60)
-        rms = numpy.std(residuals_60)*numpy.sqrt((len(residuals_60) - 1) / (len(residuals_60) - 3))
+        rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1) / (len(residuals_60) - 3))
         return rms, delta
 
 
@@ -112,12 +112,11 @@ def min_rms(percentage):
         lower_num = 0.2 * len(residuals) + 0.5
         higher_num = 0.8 + len(residuals) + 0.5
         residuals_60 = residuals[int(lower_num):int(higher_num)]
-        rms = numpy.std(residuals_60)*numpy.sqrt((len(residuals_60) - 1.0) / (len(residuals_60) - 3.0))
+        rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1.0) / (len(residuals_60) - 3.0))
         return rms
 
 
-def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor):
-
+def zeropoint(fits_table, cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor):
     # Adds a column full of zeros to the FITS table for use in residual
     residual_column = fits.Column(name='res', format='f6.3', array=0)
     fits_table.add_column(residual_column)
@@ -130,7 +129,7 @@ def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_facto
     if res_choice == "x2":
         n_norm = -1.0 * b_factor  # min in x2
 
-    for index, galaxy in enumerate(cluster):
+    for index, galaxy in enumerate(fits_table[cluster]):
         zeropoint_dict = {}
         # expression "//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//"
         # n_recol = y1, n_Iecol = x2_col, n_sigcol = x1_col
@@ -140,11 +139,13 @@ def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_facto
         expression = n_recol - a_factor * n_sigcol - b_factor * n_Iecol
         zeropoint_dict["z" + str(index)] = expression
         non_cluster_residual = fits_table[:index] + fits_table[
-                                                         index + 1:]  # Potentially works, if it is a list
-        zeropoint_dict["z" + str(index)] = ((zeropoint_dict["z" + str(index)]) * (fits_table[index])) + 1000.0 * non_cluster_residual
+                                                    index + 1:]  # Potentially works, if it is a list
+        zeropoint_dict["z" + str(index)] = ((zeropoint_dict["z" + str(index)]) * (
+        fits_table[index])) + 1000.0 * non_cluster_residual
         # Ignore z values that are above 100.0
         temp_zeropoint_dict = copy.deepcopy(zeropoint_dict)
         temp_zeropoint_dict["z" + str(index) > 100.0] = float("NaN")
+        n_zero = 0
         if type_solution.lower() == "median":
             # use with delta and quartile
             n_zero = numpy.nanmedian(temp_zeropoint_dict)
@@ -152,12 +153,13 @@ def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_facto
             # use with rms
             n_zero = numpy.nanmean(temp_zeropoint_dict)
 
-            # printf("Zero point for cluster  %-3d : %8.5f\n",n_i,n_zero)
-            # residuals normalized
-        residuals(n_norm, index, n_zero, zeropoint_dict)
+        print("Zero point for cluster  %-3d : %8.5f\n", cluster, n_zero)
+        # residuals normalized
+        return n_norm, index, n_zero, zeropoint_dict, fits_table
+        # residuals(n_norm, index, n_zero, zeropoint_dict)
 
 
-def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
+def residuals(fits_table, n_norm, cluster_number, n_zero, zeropoint_dict):
     '''
      n_expression="((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
  print(n_expression, > tmpexp)
@@ -173,12 +175,12 @@ def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     non_cluster_residual = fits_table[:cluster_number] + fits_table[
                                                          cluster_number + 1:]  # Potentially works, if it is a list
     residual_data = ((zeropoint_dict[cluster_number] - n_zero) * (
-    fits_table[cluster_number])) / n_norm + 1000.0 * non_cluster_residual
+        fits_table[cluster_number])) / n_norm + 1000.0 * non_cluster_residual
     # fits_data[nclud] gets row, if that's what needed
     residual_number_col = fits.Column(name='r' + str(cluster_number), format='f6.3', array=residual_data)
     # TODO: tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3") This seems to put the result into the residual, numbered by the cluster number, so neeed to add "residuals" thing
     res_zeropoint = fits_table['res'] + ((zeropoint_dict[cluster_number] - n_zero) * (
-    fits_table[cluster_number])) / n_norm
+        fits_table[cluster_number])) / n_norm
     # TODO: next tcalc puts it in the general residual line, so that is used the most
     residual_number_all = fits.Column(name='res', format='f6.3', array=residual_data)
     # new_columns = fits.ColDefs([residual_number_col, residual_number_all])
@@ -194,7 +196,7 @@ def residuals(n_norm, cluster_number, n_zero, zeropoint_dict):
     print(fits_table[cluster_number])
     print("\n\n\n---------- Residual Things-----------\n\n\n\n")
     status = 0
-    return status
+    return fits_table
 
 
 def line_solve():
@@ -225,25 +227,28 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
     hdu_num = 0
     finished_table = Table()
     for filename in list_files:
-            try:
-                table = Table.read(filename, format="fits", hdu=hdu_num)
-                print(table['NEXTEND'])
-                print(repr(table))
-                cluster_number += 1
-                hdu_num += 1
-                if solve_plane:
-                    newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
-                    new_table = Table(newer_table)
-                else:
-                    newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
-                    new_table = Table(newer_table)
-                new_table['cluster_number'] = cluster_number
-                print("New Table")
-                print(new_table)
-                finished_table = vstack([finished_table, new_table])
-            except (IOError):
-                print("Cannot find " + str(filename))
-                break
+        try:
+            temp_table = Table.read(filename, format="fits", hdu=hdu_num)
+            table = copy.deepcopy(temp_table)
+            # Convert all headers to uppercase
+            for header in temp_table.columns:
+                if header != header.upper():
+                    table.rename_column(header, header.upper())
+            cluster_number += 1
+            hdu_num += 1
+            if solve_plane:
+                newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
+                new_table = Table(newer_table)
+            else:
+                newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
+                new_table = Table(newer_table)
+            new_table['CLUSTER_NUMBER'] = cluster_number
+            print("New Table")
+            print(new_table)
+            finished_table = vstack([finished_table, new_table])
+        except (IOError):
+            print("Cannot find " + str(filename))
+            break
     total_galaxies = len(finished_table)
     print("Finished Table")
     print(finished_table)
@@ -312,7 +317,7 @@ def bootstrap_cluster():
         # On the 6th line from tfitlin, which goes to STDIN, fields takes the 3rd and 4th whitespace
         # separated values in line 6
         # Scan scans in those values into n_a and n_b
-       # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
+        # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
         # scan(n_a,n_b)
     else:
         return 0
@@ -326,7 +331,6 @@ def bootstrap_cluster():
         # If two parameter fit make the face zero column
         fits_table[x2_col] = 0.0
 
-
     # TODO: bootstrap a cluster to get a different distribution to check with check_guess
     return 0
 
@@ -336,10 +340,13 @@ def determine_uncertainty(solutions):
     return 0
 
 
-def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor, flow_print, flow_a, flow_b):
+def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                        flow_print, flow_a, flow_b):
     m_a = a_factor_in / 200.0
     m_b = b_factor_in / 200.0
-    if (a_factor <= m_a or a_iterations > max_iterations) and ((b_factor <= m_b or b_iterations > max_iterations) or solve_plane ) or ( a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations ):
+    if (a_factor <= m_a or a_iterations > max_iterations) and (
+        (b_factor <= m_b or b_iterations > max_iterations) or solve_plane) or (
+            a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations):
         if not restart_factor:
             flow_end = True
             flow_print = True
@@ -385,7 +392,8 @@ def next_res():
     return 0
 
 
-def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta_in, sig_a, sig_b, very_low_in, very_high_in, minimization_algorithm, flow_a, flow_b,):
+def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta_in,
+                                  sig_a, sig_b, very_low_in, very_high_in, minimization_algorithm, flow_a, flow_b, ):
     if a_iterations == 1 and b_iterations == 1:
         a_out = a_in
         b_out = b_in
@@ -465,10 +473,10 @@ def tfitlin(table):
         # x is in the same format as the x passed to Data or RealData.
         #
         # Return an array in the same format as y passed to Data or RealData.
-        return B[0]*x + B[1]
+        return B[0] * x + B[1]
 
     def f3(B, x):
-        return B[0]*x + B[1]*x +B[2]
+        return B[0] * x + B[1] * x + B[2]
 
     intable = str(input("Input Table: "))
     y_col = str(input("Y column name, log r") or "logre_r")
@@ -522,12 +530,12 @@ if __name__ == "__main__":
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
     res_choice = str(input("Residual to minimize (per,y,x1,x2): ")).strip() or "per"
-    y_col = str(input("Column name for y: ")).strip() or "lre_GR_sc"
-    x1_col = str(input("Column name for x1: ")).strip() or "lsig_re"
-    x2_col = str(input("Column name for x2 (optional): ")).strip()
+    y_col = str(input("Column name for y: ")).strip().upper() or "lre_GR_sc".upper()
+    x1_col = str(input("Column name for x1: ")).strip().upper() or "lsig_re".upper()
+    x2_col = str(input("Column name for x2 (optional): ")).strip().upper()
     zeropoint_choice = input("Zeropoints (median, mean): ") or "median"
-    galaxy_name = str(input("Column name for galaxy: ") or "GALAXY").strip()
-    group_name = str(input("Column name for group: ") or "GROUP").strip()
+    galaxy_name = str(input("Column name for galaxy: ") or "GALAXY").strip().upper()
+    group_name = str(input("Column name for group: ") or "GROUP").strip().upper()
     factor_change_a = float(input("Starting factor for changes in a: ") or 0.05)
     factor_change_b = float(input("Starting factor for changes in b: ") or 0.02)
     iterations = int(input("Maximum number of iterations: ") or 0)
@@ -544,10 +552,10 @@ if __name__ == "__main__":
     list_filenames = filename.split(",")
     list_files = [x for x in list_filenames if x.strip()]
 
-    for fits_file in list_files:
-        hduist = fits.open(fits_file)
-        print(repr(hduist[0].header))
-        print(repr(hduist[1].header))
+    # for fits_file in list_files:
+    #   hduist = fits.open(fits_file)
+    #  print(repr(hduist[0].header))
+    # print(repr(hduist[1].header))
     # Checks for which variables and functions to call
     if not x2_col:
         # Only use two parameters
