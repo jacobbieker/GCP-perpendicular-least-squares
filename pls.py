@@ -1,7 +1,7 @@
 __author__ = 'Jacob Bieker'
 import os, sys, random
 import numpy
-from astropy.table import Table, vstack
+from astropy.table import Table, vstack, Column, pprint
 from astropy.io import fits
 import copy
 import scipy.odr as odr
@@ -144,7 +144,7 @@ def zeropoint(cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_facto
         zeropoint_dict["z" + str(index)] = ((zeropoint_dict["z" + str(index)]) * (fits_table[index])) + 1000.0 * non_cluster_residual
         # Ignore z values that are above 100.0
         temp_zeropoint_dict = copy.deepcopy(zeropoint_dict)
-        temp_zeropoint_dict[x > 100.0] = float("NaN")
+        temp_zeropoint_dict["z" + str(index) > 100.0] = float("NaN")
         if type_solution.lower() == "median":
             # use with delta and quartile
             n_zero = numpy.nanmedian(temp_zeropoint_dict)
@@ -207,11 +207,11 @@ def plane_solve():
     return 0
 
 
-def read_clusters(filename, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col):
+def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col):
     '''
     Reads in the FITS file and creates one table from the different tables and counts the
     total number of galaxies, for use later
-    :param filename: Name of the FITS file
+    :param list_files: Name of the FITS file(s) in a list
     :param solve_plane: Boolean whether x2_col should be counted or not
     :param galaxy_name: Column name for the galaxy
     :param group_name: Column name for the group
@@ -224,21 +224,29 @@ def read_clusters(filename, solve_plane, galaxy_name, group_name, y_col, x1_col,
     cluster_number = 0
     hdu_num = 0
     finished_table = Table()
-    while (True):
-        try:
-            table = Table.read(filename, format="fits", hdu=hdu_num)
-            cluster_number += 1
-            hdu_num += 1
-            if solve_plane:
-                new_table = Table(table, names=(galaxy_name, group_name, y_col, x1_col, x2_col))
-            else:
-                new_table = Table(table, names=(galaxy_name, group_name, y_col, x1_col))
-            cluster_num_column = fits.Column(cluster_number, name="cluster_number")
-            new_table.add_column(cluster_num_column)
-            finished_table = vstack(finished_table, new_table)
-        except:
-            break
+    for filename in list_files:
+            try:
+                table = Table.read(filename, format="fits", hdu=hdu_num)
+                print(table['NEXTEND'])
+                print(repr(table))
+                cluster_number += 1
+                hdu_num += 1
+                if solve_plane:
+                    newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
+                    new_table = Table(newer_table)
+                else:
+                    newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
+                    new_table = Table(newer_table)
+                new_table['cluster_number'] = cluster_number
+                print("New Table")
+                print(new_table)
+                finished_table = vstack([finished_table, new_table])
+            except (IOError):
+                print("Cannot find " + str(filename))
+                break
     total_galaxies = len(finished_table)
+    print("Finished Table")
+    print(finished_table)
     return finished_table, total_galaxies
 
 
@@ -300,12 +308,14 @@ def bootstrap_cluster():
         # get the RMA coefficients
         '''
     if res_choice == "y":
+        return 0
         # On the 6th line from tfitlin, which goes to STDIN, fields takes the 3rd and 4th whitespace
         # separated values in line 6
         # Scan scans in those values into n_a and n_b
        # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
         # scan(n_a,n_b)
     else:
+        return 0
         # On the 3rd to last line from tfitlin, which goes to STDIN, fields takes the 2nd and 3rd whitespace
         # separated values
         # tail(tmpout,nlines=3) | fields("STDIN","2-3",lines="1") | \ scan(n_a, n_b)
@@ -508,7 +518,7 @@ if __name__ == "__main__":
     b_out = 0
     restart_factor = False
 
-    filename = str(input("Enter the filename containing the cluster(s): ")).strip()
+    filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
     res_choice = str(input("Residual to minimize (per,y,x1,x2): ")).strip() or "per"
@@ -516,8 +526,8 @@ if __name__ == "__main__":
     x1_col = str(input("Column name for x1: ")).strip() or "lsig_re"
     x2_col = str(input("Column name for x2 (optional): ")).strip()
     zeropoint_choice = input("Zeropoints (median, mean): ") or "median"
-    galaxy_name = str(input("Column name for galaxy: ")).strip()
-    group_name = str(input("Column name for group: ")).strip()
+    galaxy_name = str(input("Column name for galaxy: ") or "GALAXY").strip()
+    group_name = str(input("Column name for group: ") or "GROUP").strip()
     factor_change_a = float(input("Starting factor for changes in a: ") or 0.05)
     factor_change_b = float(input("Starting factor for changes in b: ") or 0.02)
     iterations = int(input("Maximum number of iterations: ") or 0)
@@ -531,6 +541,13 @@ if __name__ == "__main__":
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
     print(random_numbers)
+    list_filenames = filename.split(",")
+    list_files = [x for x in list_filenames if x.strip()]
+
+    for fits_file in list_files:
+        hduist = fits.open(fits_file)
+        print(repr(hduist[0].header))
+        print(repr(hduist[1].header))
     # Checks for which variables and functions to call
     if not x2_col:
         # Only use two parameters
@@ -538,6 +555,5 @@ if __name__ == "__main__":
         solve_plane = False
     else:
         solve_plane = True
-
-    fits_table, total_galaxies = read_clusters(filename, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col)
+    fits_table, total_galaxies = read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col)
     # min_delta(filename="rxj1226allfit.fits", percentage=100)
