@@ -253,6 +253,7 @@ if(n_resalgo=="x2")
 
 tcalc(tmpall,"res","0.",colfmt="f6.3")
 
+###################### ZEROPOINT TRUMP ############################################
 for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
 # delta y
  n_expression = "("//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//")"

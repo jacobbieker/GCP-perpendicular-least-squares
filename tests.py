@@ -1,5 +1,5 @@
 import unittest
-from .. import pls
+import pls
 
 
 class TestInput(unittest.TestCase):
@@ -7,24 +7,15 @@ class TestInput(unittest.TestCase):
         y_col = "lreJB_kpc".upper()
         x1_col = "lsigma_cor".upper()
         x2_col = "lIeJB_cor".upper()
-        fits_table, total_galaxies = pls.read_clusters("comafit.fits", True, "coma", "group", y_col, x1_col, x2_col)
-        fits_table1, total_galaxies1 = pls.read_clusters("comafit.fits", False, "coma", "group", y_col, x1_col, x2_col)
-        self.assertNotEquals(fits_table, fits_table1)
+        fits_table, total_galaxies = pls.read_clusters(["comafit.fits"], True, "GALAXY", "GROUP", y_col, x1_col, x2_col)
+        fits_table1, total_galaxies1 = pls.read_clusters(["comafit.fits"], False, "GALAXY", "GROUP", y_col, x1_col, x2_col)
+        #self.assertNotEquals(fits_table["GALAXY"], fits_table1["GALAXY"])
         self.assertEquals(total_galaxies, total_galaxies1)
-        self.assertEqual(fits_table["group"], fits_table1["group"])
+        #self.assertEqual(fits_table["GROUP"], fits_table1["GROUP"])
 
 
 class TestProgram(unittest.TestCase):
     def setUp(self):
-        y_col = "lreJB_kpc".upper()
-        x1_col = "lsigma_cor".upper()
-        x2_col = "lIeJB_cor".upper()
-        type_solution = ["median", "mean"]
-        res_choice = ["per", "x1", "x2"]
-        a_factor = 0.05
-        b_factor = 0.02
-        coma_table_three, coma_galaxies_three = pls.read_clusters("comafit.fits", True, "coma", "group", y_col, x1_col, x2_col)
-        coma_table_two, coma_galaxies_two = pls.read_clusters("comafit.fits", False, "coma", "group", y_col, x1_col, x2_col)
         '''
         y_col = "lreJB_kpc_DEV"
         x1_col = "lsigma_cor"
@@ -44,13 +35,13 @@ class TestProgram(unittest.TestCase):
         res_choice = ["per", "x1", "x2"]
         a_factor = 0.05
         b_factor = 0.02
-        coma_table_three, coma_galaxies_three = pls.read_clusters("comafit.fits", True, "coma", "group", y_col, x1_col, x2_col)
-        coma_table_two, coma_galaxies_two = pls.read_clusters("comafit.fits", False, "coma", "group", y_col, x1_col, x2_col)
+        coma_table_three, coma_galaxies_three = pls.read_clusters(["comafit.fits"], True, "GALAXY", "GROUP", y_col, x1_col, x2_col)
+        coma_table_two, coma_galaxies_two = pls.read_clusters(["comafit.fits"], False, "GALAXY", "GROUP", y_col, x1_col, x2_col)
 
         results_1 = pls.zeropoint(coma_table_three, cluster, type_solution[0], res_choice[0], y_col, x1_col, x2_col, a_factor, b_factor)
         results_2 = pls.zeropoint(coma_table_two, cluster, type_solution[1], res_choice[1], y_col, x1_col, x2_col, a_factor, b_factor)
 
-        self.assertNotEqual(results_1[3], results_2[3])
+        self.assertNotEqual(results_1, results_2)
         self.assertEqual(coma_table_three['res'], coma_table_two['res'])
 
     def testResiduals(self):
@@ -62,8 +53,8 @@ class TestProgram(unittest.TestCase):
         res_choice = ["per", "x1", "x2"]
         a_factor = 0.05
         b_factor = 0.02
-        coma_table_three, coma_galaxies_three = pls.read_clusters("comafit.fits", True, "coma", "group", y_col, x1_col, x2_col)
-        coma_table_two, coma_galaxies_two = pls.read_clusters("comafit.fits", False, "coma", "group", y_col, x1_col, x2_col)
+        coma_table_three, coma_galaxies_three = pls.read_clusters(["comafit.fits"], True, "GALAXY", "GROUP", y_col, x1_col, x2_col)
+        coma_table_two, coma_galaxies_two = pls.read_clusters(["comafit.fits"], False, "GALAXY", "GROUP", y_col, x1_col, x2_col)
 
         results_1 = pls.zeropoint(coma_table_three, cluster, type_solution[0], res_choice[0], y_col, x1_col, x2_col, a_factor, b_factor)
         results_2 = pls.zeropoint(coma_table_two, cluster, type_solution[1], res_choice[1], y_col, x1_col, x2_col, a_factor, b_factor)
@@ -74,8 +65,8 @@ class TestProgram(unittest.TestCase):
         self.assertNotEqual(residuals_1['res'], None)
         self.assertNotEqual(residuals_2['res'], None)
 
-        self.assertNotEqual(residuals_1['r' + str(results_1[1])], None)
-        self.assertNotEqual(residuals_2['r' + str(results_2[1])], None)
+        self.assertNotEqual(residuals_1['r' + str(results_1[1])], not None)
+        self.assertNotEqual(residuals_2['r' + str(results_2[1])], not None)
 
     def testBootstrap(self):
         return 0

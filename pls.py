@@ -1,6 +1,7 @@
 __author__ = 'Jacob Bieker'
 import os, sys, random
 import numpy
+import pandas
 from astropy.table import Table, vstack, Column, pprint, TableColumns
 from astropy.io import fits
 import copy
@@ -116,10 +117,21 @@ def min_rms(percentage):
         return rms
 
 
-def zeropoint(fits_table, cluster, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor):
+def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor):
     # Adds a column full of zeros to the FITS table for use in residual
-    residual_column = fits.Column(name='res', format='f6.3', array=0)
-    fits_table.add_column(residual_column)
+    fits_table['RESIDUAL'] = 0.0
+
+    # Split into the amount of tables for each cluster
+    table_dict = {}
+    for i in range(1, clusters+1):
+        table_dict[i] = fits_table[[]]
+        for index, element in enumerate(fits_table):
+            if element['CLUSTER_NUMBER'] == i:
+                table_dict[i] = vstack([table_dict[i], fits_table[index]])
+        table_dict[i].fill_value = -99999.9
+        table_dict[i] = table_dict[i].filled()
+
+    print(table_dict)
 
     n_norm = 1.  # min in y
     if res_choice == "per":
@@ -128,35 +140,66 @@ def zeropoint(fits_table, cluster, type_solution, res_choice, y_col, x1_col, x2_
         n_norm = -1.0 * a_factor  # min in x1
     if res_choice == "x2":
         n_norm = -1.0 * b_factor  # min in x2
-
-    for index, galaxy in enumerate(fits_table[cluster]):
+    for nclus in table_dict.keys():
         zeropoint_dict = {}
+        # Should copy the original table, but independent, and then remove the current galaxies row
+        non_cluster_residual = fits_table[[]]
+        for table in table_dict.keys():
+            print("Keys\n\n")
+            print(table)
+            print(nclus)
+            if table != nclus:
+                non_cluster_residual = vstack([non_cluster_residual, table_dict[table]])
+        print(non_cluster_residual)
+
         # expression "//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//"
         # n_recol = y1, n_Iecol = x2_col, n_sigcol = x1_col
         n_recol = fits_table[y_col]
         n_Iecol = fits_table[x2_col]
         n_sigcol = fits_table[x1_col]
         expression = n_recol - a_factor * n_sigcol - b_factor * n_Iecol
-        zeropoint_dict["z" + str(index)] = expression
-        non_cluster_residual = fits_table[:index] + fits_table[
-                                                    index + 1:]  # Potentially works, if it is a list
-        zeropoint_dict["z" + str(index)] = ((zeropoint_dict["z" + str(index)]) * (
-        fits_table[index])) + 1000.0 * non_cluster_residual
+        zeropoint_dict["z" + str(nclus)] = expression
+        array = zeropoint_dict["z" + str(nclus)].view(zeropoint_dict["z" + str(nclus)].dtype.fields
+                                                     or zeropoint_dict["z" + str(nclus)].dtype, numpy.ndarray)
+        zeropoint_dict["z" + str(nclus)] = array
+        '''
+        # delta y
+         n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
+        print(n_expression, >tmpexp)
+        tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
+
+        So the expression maybe only calculates on the numerical columns for the zeropoint?
+
+        It says delta y right before the for loop in iterfitlin.cl so possibly only y_col matters for this
+        so then it is only numerical
+        '''
+        print("Fits_Table Cluster [Cluster]")
+        print(table_dict[nclus])
+        print("\n\n fits_Table [index][y_col]")
+        print(table_dict[nclus][y_col])
+        print("\n\n non_clsuter_residual [y_col]")
+        print(non_cluster_residual[y_col])
+        print(zeropoint_dict)
+        zeropoint_dict["z" + str(nclus)] = ((zeropoint_dict["z" + str(nclus)]) * (
+            table_dict[nclus][y_col])) + 1000.0 * non_cluster_residual[y_col]
         # Ignore z values that are above 100.0
         temp_zeropoint_dict = copy.deepcopy(zeropoint_dict)
-        temp_zeropoint_dict["z" + str(index) > 100.0] = float("NaN")
+        for spot, value in enumerate(temp_zeropoint_dict["z" + str(nclus)]):
+            if value > 100.0:
+                temp_zeropoint_dict["z" + str(nclus)][spot] = numpy.float64("NaN")
         n_zero = 0
+        print(temp_zeropoint_dict)
         if type_solution.lower() == "median":
             # use with delta and quartile
-            n_zero = numpy.nanmedian(temp_zeropoint_dict)
+            n_zero = numpy.nanmedian(temp_zeropoint_dict["z" + str(nclus)])
         elif type_solution.lower() == "mean":
             # use with rms
-            n_zero = numpy.nanmean(temp_zeropoint_dict)
+            n_zero = numpy.nanmean(temp_zeropoint_dict["z" + str(nclus)])
 
-        print("Zero point for cluster  %-3d : %8.5f\n", cluster, n_zero)
+        print("Zero point for cluster  %-3d : %8.5f\n", nclus, n_zero)
         # residuals normalized
-        return n_norm, index, n_zero, zeropoint_dict, fits_table
-        # residuals(n_norm, index, n_zero, zeropoint_dict)
+        residuals(fits_table, n_norm, nclus, n_zero, zeropoint_dict)
+    return fits_table
 
 
 def residuals(fits_table, n_norm, cluster_number, n_zero, zeropoint_dict):
@@ -172,6 +215,10 @@ def residuals(fits_table, n_norm, cluster_number, n_zero, zeropoint_dict):
     :param n_norm:
     :return:
     '''
+    # Should copy the original table, but independent, and then remove the current galaxies row
+    non_cluster_residual = fits_table.copy()
+    non_cluster_residual.remove_row(cluster_number)
+
     non_cluster_residual = fits_table[:cluster_number] + fits_table[
                                                          cluster_number + 1:]  # Potentially works, if it is a list
     residual_data = ((zeropoint_dict[cluster_number] - n_zero) * (
@@ -237,21 +284,21 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
             cluster_number += 1
             hdu_num += 1
             if solve_plane:
-                newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
+                newer_table = table.columns[galaxy_name, group_name, y_col, x1_col, x2_col]
                 new_table = Table(newer_table)
             else:
                 newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
                 new_table = Table(newer_table)
             new_table['CLUSTER_NUMBER'] = cluster_number
-            print("New Table")
-            print(new_table)
+            #print("New Table")
+            #print(new_table)
             finished_table = vstack([finished_table, new_table])
         except (IOError):
             print("Cannot find " + str(filename))
             break
     total_galaxies = len(finished_table)
-    print("Finished Table")
-    print(finished_table)
+    #print("Finished Table")
+    #print(finished_table)
     return finished_table, total_galaxies
 
 
