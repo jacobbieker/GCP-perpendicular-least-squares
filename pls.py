@@ -138,7 +138,7 @@ def min_rms(table, percentage):
         return rms
 
 
-def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor):
+def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2_col, a_factor, b_factor, solve_plane):
     # Adds a column full of zeros to the FITS table for use in residual
     fits_table['RESIDUAL'] = 0.0
 
@@ -154,20 +154,14 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         n_norm = -1.0 * b_factor  # min in x2
     for nclus in table_dict.keys():
         zeropoint_dict = {}
-        # Should copy the original table, but independent, and then remove the current galaxies row
-        non_cluster_residual = fits_table[[]]
-        for table in table_dict.keys():
-            print("Keys\n\n")
-            print(table)
-            print(nclus)
-            if table != nclus:
-                non_cluster_residual = vstack([non_cluster_residual, table_dict[table]])
-        print(non_cluster_residual)
 
-        n_recol = fits_table[y_col]
-        n_Iecol = fits_table[x2_col]
-        n_sigcol = fits_table[x1_col]
-        expression = n_recol - a_factor * n_sigcol - b_factor * n_Iecol
+        n_recol = table_dict[nclus][y_col]
+        n_sigcol = table_dict[nclus][x1_col]
+        if solve_plane:
+            n_Iecol = table_dict[nclus][x2_col]
+            expression = n_recol - a_factor * n_sigcol - b_factor * n_Iecol
+        else:
+            expression = n_recol - a_factor * n_sigcol
         zeropoint_dict["z" + str(nclus)] = expression
         array = zeropoint_dict["z" + str(nclus)].view(zeropoint_dict["z" + str(nclus)].dtype.fields
                                                       or zeropoint_dict["z" + str(nclus)].dtype, numpy.ndarray)
@@ -184,9 +178,6 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         print("Zero point for cluster  %-3d : %8.5f\n", nclus, n_zero)
 
         # Copy the zeropoint values into the fits_table
-        # TODO make this only apply to those with the same nclus number
-        fits_table["ZEROPOINT"] = n_zero
-        # Possibly works
         table_dict[nclus]["ZEROPOINT"] = n_zero
         # residuals normalized
         table_dict = residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict)
@@ -201,8 +192,7 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
 def residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict):
     residual_data = (zeropoint_dict["z" + str(nclus)] - n_zero) / n_norm
     table_dict[nclus]["R" + str(nclus)] = residual_data
-    res_zeropoint = table_dict[nclus]["RESIDUAL"] + (
-                                                        (zeropoint_dict["z" + str(nclus)] - n_zero)) / n_norm
+    res_zeropoint = table_dict[nclus]["RESIDUAL"] + (zeropoint_dict["z" + str(nclus)] - n_zero) / n_norm
     table_dict[nclus]["RESIDUAL"] = res_zeropoint
     # Debug stuff
 
