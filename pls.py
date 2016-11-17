@@ -357,7 +357,7 @@ def bootstrap_cluster(table_dict):
 
     if solve_plane:
         # If two parameter fit make the face zero column
-        fits_table[x2_col] = 0.0
+        cluster_table[x2_col] = 0.0
 
     # TODO: bootstrap a cluster to get a different distribution to check with check_guess
     return 0
@@ -377,11 +377,12 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
                     a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations):
         if not restart_factor:
             end = True
-            printing = True # ensure printing of last coefficient
+            printing = True  # ensure printing of last coefficient
             a_in = a_out
             b_in = b_out
-            next_res()
+            next_res(min_choice, total_galaxies, end)
         else:
+            end = False
             restart_factor = False
             a_in = a_out
             b_in = b_out
@@ -394,7 +395,7 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
                 print("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n", a_factor_in, b_factor_in)
                 print("")
 
-            restart()
+            restart(printing, end)
 
     # Change Coefficients
     if flow_a:
@@ -403,12 +404,13 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
     if flow_b:
         b_in *= 1.0 * sig_b * b_factor
         b_iterations += 1
-    next_res()
+    end = False # TODO make sure this doesn't mess anything up
+    next_res(min_choice, total_galaxies, end)
 
     return 0
 
 
-def restart(printing):
+def restart(printing, end):
     if printing:
         if min_choice == "quartile":
             print(" ----a----   ----b----\n")
@@ -436,11 +438,11 @@ def restart(printing):
     n_signb = 1
     n_flfirst = True
 
-    next_res()
+    next_res(min_choice, total_galaxies, end)
 
 
 def next_res(min_choice, total_galaxies, end):
-    zeropooint_table = zeropoint()
+    zeropooint_table = zeropoint(fits_table, clusters, zeropoint_choice, res_choice, y_col, x1_col, x2_col, a_factor, b_factor, solve_plane)
 
     # Minimize
     if min_choice == "quartile":
@@ -457,13 +459,14 @@ def next_res(min_choice, total_galaxies, end):
     if end:
         cleanup()
     else:
-       determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta,
-                                                   sig_a, sig_b, very_low_in, very_high_in, min_choice, flow_a, flow_b)
+        determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta,
+                                      sig_a, sig_b, very_low_in, very_high_in, min_choice, flow_a, flow_b, a_out, b_out)
     return 0
 
 
 def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta_in,
-                                  sig_a, sig_b, very_low_in, very_high_in, minimization_algorithm, flow_a, flow_b, ):
+                                  sig_a, sig_b, very_low_in, very_high_in, minimization_algorithm, flow_a, flow_b,
+                                  a_out, b_out):
     if a_iterations == 1 and b_iterations == 1:
         a_out = a_in
         b_out = b_in
@@ -480,7 +483,8 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
             if minimization_algorithm == "quartile":
                 very_low_out = very_low_in
                 very_high_out = very_high_in
-            change_coefficients()
+            change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                                printing, flow_a, flow_b)
         if delta_in > delta_out and a_factor > a_factor_in / 200.0 and (b_factor > b_factor_in / 200.0 or solve_plane):
             # Change the current coefficients back to previous values
             a_in = a_out
@@ -488,11 +492,13 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
             if flow_a and (a_iterations == 1 or flow_first):
                 sig_a = -sig_b
                 flow_first = False
-                change_coefficients()
+                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                                    printing, flow_a, flow_b)
             if flow_b and (b_iterations == 1 or flow_first):
                 sig_b = -sig_b
                 flow_first = False
-                change_coefficients()
+                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                                    printing, flow_a, flow_b)
             if (a_iterations > 1 or b_iterations > 1) and not flow_first:
                 if not solve_plane:
                     # Change the other coefficient
@@ -504,7 +510,8 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
                     a_factor /= 2.0
                 if flow_b and b_iterations > 1:
                     b_factor /= 2.0
-                change_coefficients()
+                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                                    printing, flow_a, flow_b)
 
 
 def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
@@ -675,10 +682,22 @@ if __name__ == "__main__":
     a_iterations = 0
     b_iterations = 0
     max_iterations = 0
-    a_out = 0
-    b_out = 0
+    a_out = 0.0
+    b_out = 0.0
     restart_factor = False
     printing = True
+
+    # Initalizing variables
+    very_low_in = 0
+    very_high_in = 0
+    delta_out = 0.0
+    flow_a = False
+    flow_first = False
+    flow_b = False
+    a_in = 0.0
+    b_in = 0.0
+    end = False
+
 
     filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
@@ -719,6 +738,8 @@ if __name__ == "__main__":
         solve_plane = True
     fits_table, total_galaxies = read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col)
 
+    # Number of clusters
+    clusters = len(list_files)
     # Intialize bootstrap
     flow_boot = False
     if num_bootstrap > 0:
@@ -731,7 +752,7 @@ if __name__ == "__main__":
     print("")
     print("Fitting technique : iterative, %s %s minimized, %s zero points\n",
           res_choice, min_choice, zeropoint_choice)
-    print("Number of clusters: %4d\n", len(list_files))  # TODO Make sure this actually counts all clusters inputted
+    print("Number of clusters: %4d\n", clusters)  # TODO Make sure this actually counts all clusters inputted
     print("Number of galaxies: %4d\n", total_galaxies)
     print(" (n_facta,n_bfact)=(%7.4f,%7.4f)\n", factor_change_a, factor_change_b)
     print("Columns           : ", galaxy_name, group_name, y_col, x1_col, x2_col)
