@@ -176,12 +176,21 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         # Possibly works
         table_dict[nclus]["ZEROPOINT"] = n_zero
         # residuals normalized
-        residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict)
+        table_dict = residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict)
+
+    # Recombining table_dict into a single table
+    fits_table = table_dict[1][[]]
+    for i in range(1, clusters+1):
+        for key in table_dict.keys():
+                fits_table = vstack([fits_table, table_dict[key]])
+    print("Final FITS TABLE")
+    print(fits_table)
+    print("\n\n\n\n END FITS TABLE")
     return fits_table
 
 
 def residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict):
-    residual_data = ((zeropoint_dict["z" + str(nclus)] - n_zero)) / n_norm
+    residual_data = (zeropoint_dict["z" + str(nclus)] - n_zero) / n_norm
     table_dict[nclus]["R" + str(nclus)] = residual_data
     res_zeropoint = table_dict[nclus]["RESIDUAL"] + (
                     (zeropoint_dict["z" + str(nclus)] - n_zero)) / n_norm
