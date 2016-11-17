@@ -106,7 +106,7 @@ def min_quartile(table, total_galaxies):
 
     if printing:
         print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %8.5f %8.5f %8.5f\n",
-              a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, very_low_num, very_high_num, delta)
+              a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, very_low_num, very_high_num, delta)
     return delta
 
 
@@ -122,7 +122,7 @@ def min_delta(table, percentage, total_galaxies):
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
         if printing:
             print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f\n",
-                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, delta, rms)
+                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, delta, rms)
         return rms, delta
     elif percentage == 60:
         high_num = total_galaxies * 0.6 + 0.5
@@ -132,7 +132,7 @@ def min_delta(table, percentage, total_galaxies):
         rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1) / (len(residuals_60) - 3))
         if printing:
             print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f %4d\n",
-                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, delta, rms, len(residuals_60))
+                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, delta, rms, len(residuals_60))
         return rms, delta
 
 
@@ -143,7 +143,7 @@ def min_rms(table, percentage):
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
         if printing:
             print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f\n",
-                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, rms)
+                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, rms)
         return rms
     elif percentage == 60:
         lower_num = 0.2 * len(residuals) + 0.5
@@ -152,7 +152,7 @@ def min_rms(table, percentage):
         rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1.0) / (len(residuals_60) - 3.0))
         if printing:
             print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %4d\n",
-                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, rms, len(residuals_60))
+                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, rms, len(residuals_60))
         return rms
 
 
@@ -339,15 +339,15 @@ def bootstrap_cluster(table_dict):
         # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
         # scan(n_a,n_b)
         # TODO Know these are wrong, figuring out what needs to be here for the factors
-        a_factor = odr_fit[3]
-        b_factor = odr_fit[4]
+        a_in = odr_fit[3]
+        b_in = odr_fit[4]
     else:
         # On the 3rd to last line from tfitlin, which goes to STDIN, fields takes the 2nd and 3rd whitespace
         # separated values
         # tail(tmpout,nlines=3) | fields("STDIN","2-3",lines="1") | \ scan(n_a, n_b)
         # TODO Know these are wrong, figuring out what needs to be here for the factors
-        a_factor = odr_fit[2]
-        b_factor = odr_fit[3]
+        a_in = odr_fit[2]
+        b_in = odr_fit[3]
     if solve_plane:
         b_in = 0.0
 
@@ -376,8 +376,8 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
                 (b_factor <= m_b or b_iterations > max_iterations) or solve_plane) or (
                     a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations):
         if not restart_factor:
-            flow_end = True
-            printing = True
+            end = True
+            printing = True # ensure printing of last coefficient
             a_in = a_out
             b_in = b_out
             next_res()
@@ -439,20 +439,26 @@ def restart(printing):
     next_res()
 
 
-def next_res(min_choice, total_galaxies):
+def next_res(min_choice, total_galaxies, end):
     zeropooint_table = zeropoint()
 
     # Minimize
     if min_choice == "quartile":
-        min_quartile(zeropooint_table, total_galaxies)
+        delta = min_quartile(zeropooint_table, total_galaxies)
     elif min_choice == "delta100":
-        min_delta(zeropooint_table, 100, total_galaxies)
+        rms, delta = min_delta(zeropooint_table, 100, total_galaxies)
     elif min_choice == "delta60":
-        min_delta(zeropooint_table, 60, total_galaxies)
+        rms, delta = min_delta(zeropooint_table, 60, total_galaxies)
     elif min_choice == "rms100":
-        min_rms(zeropooint_table, 100)
+        delta = min_rms(zeropooint_table, 100)
     elif min_choice == "rms60":
-        min_rms(zeropooint_table, 60)
+        delta = min_rms(zeropooint_table, 60)
+
+    if end:
+        cleanup()
+    else:
+       determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta,
+                                                   sig_a, sig_b, very_low_in, very_high_in, min_choice, flow_a, flow_b)
     return 0
 
 
@@ -573,6 +579,89 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
         od = odr.ODR(dat, mod, beta0=guess[0:3])
         out = od.run()
         return out
+
+
+def cleanup():
+    """
+    # cleanup and final zero point, rms for each cluster, total rms
+if(n_flprint && !n_flboot) {
+print("")
+
+printf("Cluster no.  Ngal     zero    n_rms    y_rms\n")
+for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
+# zero point in tables not normalized
+ tstat(tmpall,"z"//n_i,lowlim=INDEF,highlim=100., >> "/dev/null")
+ if(n_zeropoint=="median")
+   n_zero=tstat.median
+ else
+   n_zero=tstat.mean
+ n_rms=tstat.stddev*sqrt((tstat.nrows-1.)/(tstat.nrows-3.))
+ n_lrerms=n_rms
+ n_rms=n_rms/abs(n_norm)   # normalized
+ printf("   %3d       %3d  %8.5f %8.5f %8.5f\n",n_i,tstat.nrows,n_zero,n_rms,n_lrerms)
+}
+
+# residuals in table normalized
+tstat(tmpall,"res",lowlim=INDEF,highlim=INDEF, >> "/dev/null")
+if(n_zeropoint=="median")
+  n_zero=tstat.median
+else
+  n_zero=tstat.mean
+n_rms=tstat.stddev*sqrt((tstat.nrows-1.)/(tstat.nrows-3.))
+n_lrerms=n_rms*abs(n_norm)
+printf("   All       %3d  %8.5f %8.5f %8.5f\n",tstat.nrows,n_zero,n_rms,n_lrerms)
+}
+
+if(n_nboot>0) {
+ tdelete(tmpsel//","//tmpboo,verify=no, >>& "/dev/null")
+ delete(tmpran,verify=no, >>& "/dev/null")
+ n_flboot=yes ; n_flprint=no
+# n_flboot=yes ; n_flprint=yes  # test printout
+ n_a=n_aout ; n_b=n_bout ; n_factain=n_factas ; n_factbin=n_factbs
+  n_maxiter=maxiter    # reset maxiter
+  n_restart=restart    # enable restart again if it originally was
+# if 2 parameter fit, reset n_Iecol
+ if(n_twopar)
+   n_Iecol=""
+ if(n_nboot==n_totboot) {
+   print("")
+   print("Output from bootstrap samples")
+   print("")
+ }
+ if(n_nboot<n_totboot) {
+  n_ssa+=n_aout*n_aout ; n_sa+=n_aout
+  n_ssb+=n_bout*n_bout ; n_sb+=n_bout
+ }
+ random(n_totgal,seed=(n_seed-n_nboot), > tmpran)
+ tcalc(tmpran,"c1","int(1.+c1*"//n_totgal//")",colfmt="i6")
+ tsort(tmpran,"c1",ascend=yes)
+ tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
+ tmpall=tmpboo
+ n_nboot-=1
+ goto bootstrap
+}
+
+if(n_flboot) {
+ tdelete(tmpsel,verify=no, >>& "/dev/null")
+ delete(tmpran,verify=no, >>& "/dev/null")
+# add the last output
+ n_ssa+=n_aout*n_aout ; n_sa+=n_aout
+ n_ssb+=n_bout*n_bout ; n_sb+=n_bout
+ print(n_sa,n_ssa,n_sb,n_ssb)
+ n_ssa=n_ssa/n_totboot ; n_sa=n_sa/n_totboot
+ n_ssb=n_ssb/n_totboot ; n_sb=n_sb/n_totboot
+ n_ea=sqrt( n_totboot*(n_ssa-n_sa*n_sa)/(n_totboot-1) )
+ n_eb=sqrt( n_totboot*(n_ssb-n_sb*n_sb)/(n_totboot-1) )
+ print("")
+ printf("Bootstrap uncertainties based on  %5d  determinations\n",
+   n_totboot)
+ printf("   e_a=%7.4f  e_b=%7.4f\n",n_ea,n_eb)
+ tdelete(tmpboo,verify=no)
+}
+
+tdelete(n_taball,verify=no)
+    :return:
+    """
 
 
 if __name__ == "__main__":
