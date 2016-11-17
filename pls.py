@@ -103,11 +103,16 @@ def min_quartile(table, total_galaxies):
     tab_value = fits_residual[int(high_num + 0.5)]
     very_high_num = (very_high_num + tab_value) * 2.0
     delta = very_high_num - very_low_num
+
+    if printing:
+        print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %8.5f %8.5f %8.5f\n",
+              a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, very_low_num, very_high_num, delta)
     return delta
 
 
 def min_delta(table, percentage, total_galaxies):
     residuals = table["RESIDUAL"]
+    residuals = residuals.sort("RESIDUAL")
     absolute_residuals = []
     for residual in residuals:
         absolute_residual = abs(residual)
@@ -115,6 +120,9 @@ def min_delta(table, percentage, total_galaxies):
     if percentage == 100:
         delta = numpy.mean(absolute_residuals)
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
+        if printing:
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f\n",
+                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, delta, rms)
         return rms, delta
     elif percentage == 60:
         high_num = total_galaxies * 0.6 + 0.5
@@ -122,19 +130,29 @@ def min_delta(table, percentage, total_galaxies):
         residuals_60 = residuals[:int(high_num)]
         delta = numpy.mean(absolute_residuals_60)
         rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1) / (len(residuals_60) - 3))
+        if printing:
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f %4d\n",
+                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, delta, rms, len(residuals_60))
         return rms, delta
 
 
 def min_rms(table, percentage):
     residuals = table["RESIDUAL"]
+    residuals = residuals.sort("RESIDUAL")
     if percentage == 100:
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
+        if printing:
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f\n",
+                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, rms)
         return rms
     elif percentage == 60:
         lower_num = 0.2 * len(residuals) + 0.5
         higher_num = 0.8 + len(residuals) + 0.5
         residuals_60 = residuals[int(lower_num):int(higher_num)]
         rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1.0) / (len(residuals_60) - 3.0))
+        if printing:
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %4d\n",
+                  a_iterations, a_factor, b_iterations, b_factor, n_a, n_b, rms, len(residuals_60))
         return rms
 
 
@@ -297,7 +315,7 @@ def bootstrap_cluster(table_dict):
             rich_cluster = key
 
     if printing:
-        print("Cluster number with most data         :  %3d\n",rich_cluster)
+        print("Cluster number with most data         :  %3d\n", rich_cluster)
         print("Number of galaxies in this cluster    :  %3d\n", rich_members)
 
     # Fitting cluster to get rid of any NaN points
@@ -334,7 +352,7 @@ def bootstrap_cluster(table_dict):
         b_in = 0.0
 
     if printing:
-        print("Initial values               (a,b)=(%7.4f,%7.4f)\n",a_factor,b_factor)
+        print("Initial values               (a,b)=(%7.4f,%7.4f)\n", a_factor, b_factor)
         print("")
 
     if solve_plane:
@@ -390,12 +408,51 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
     return 0
 
 
-def restart():
-    return 0
+def restart(printing):
+    if printing:
+        if min_choice == "quartile":
+            print(" ----a----   ----b----\n")
+            print("  i  fact     i  fact     a       b       low q.    high q.    delta\n")
+        if min_choice == "delta100":
+            print(" ----a----   ----b----\n")
+            print("  i  fact     i  fact     a       b       delta       rms\n")
+        if min_choice == "delta60":
+            print(" ----a----   ----b----\n")
+            print("  i  fact     i  fact     a       b       delta       rms     N(delta)\n")
+        if min_choice == "rms100":
+            print(" ----a----   ----b----\n")
+            print("  i  fact     i  fact     a       b         rms\n")
+        if min_choice == "rms60":
+            print(" ----a----   ----b----\n")
+            print("  i  fact     i  fact     a       b         rms      N(rms)\n")
+
+    n_itera = 1
+    n_iterb = 1
+    n_fla = True
+    n_flb = False
+    n_facta = factor_change_a
+    n_factb = factor_change_b
+    n_signa = 1.
+    n_signb = 1
+    n_flfirst = True
+
+    next_res()
 
 
-def next_res():
-    # TODO Use to restart process again?
+def next_res(min_choice, total_galaxies):
+    zeropooint_table = zeropoint()
+
+    # Minimize
+    if min_choice == "quartile":
+        min_quartile(zeropooint_table, total_galaxies)
+    elif min_choice == "delta100":
+        min_delta(zeropooint_table, 100, total_galaxies)
+    elif min_choice == "delta60":
+        min_delta(zeropooint_table, 60, total_galaxies)
+    elif min_choice == "rms100":
+        min_rms(zeropooint_table, 100)
+    elif min_choice == "rms60":
+        min_rms(zeropooint_table, 60)
     return 0
 
 
@@ -584,10 +641,10 @@ if __name__ == "__main__":
 
     print("")
     print("Fitting technique : iterative, %s %s minimized, %s zero points\n",
-          res_choice,min_choice,zeropoint_choice)
-    print("Number of clusters: %4d\n",len(list_files)) # TODO Make sure this actually counts all clusters inputted
-    print("Number of galaxies: %4d\n",total_galaxies)
-    print(" (n_facta,n_bfact)=(%7.4f,%7.4f)\n",factor_change_a,factor_change_b)
+          res_choice, min_choice, zeropoint_choice)
+    print("Number of clusters: %4d\n", len(list_files))  # TODO Make sure this actually counts all clusters inputted
+    print("Number of galaxies: %4d\n", total_galaxies)
+    print(" (n_facta,n_bfact)=(%7.4f,%7.4f)\n", factor_change_a, factor_change_b)
     print("Columns           : ", galaxy_name, group_name, y_col, x1_col, x2_col)
     print("")
 
