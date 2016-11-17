@@ -127,9 +127,10 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         table_dict[i] = fits_table[[]]
         for index, element in enumerate(fits_table):
             if element['CLUSTER_NUMBER'] == i:
+                # This only adds the rows that have the same nclus, removing need for code later and flags
                 table_dict[i] = vstack([table_dict[i], fits_table[index]])
-        table_dict[i].fill_value = -99999.9
-        table_dict[i] = table_dict[i].filled()
+        #table_dict[i].fill_value = 99999.9
+        #table_dict[i] = table_dict[i].filled()
 
     print(table_dict)
 
@@ -173,30 +174,45 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         It says delta y right before the for loop in iterfitlin.cl so possibly only y_col matters for this
         so then it is only numerical
         '''
-        print("Fits_Table Cluster [Cluster]")
-        print(table_dict[nclus])
-        print("\n\n fits_Table [index][y_col]")
-        print(table_dict[nclus][y_col])
-        print("\n\n non_clsuter_residual [y_col]")
-        print(non_cluster_residual[y_col])
-        print(zeropoint_dict)
-        zeropoint_dict["z" + str(nclus)] = ((zeropoint_dict["z" + str(nclus)]) * (
-            table_dict[nclus][y_col])) + 1000.0 * non_cluster_residual[y_col]
+        #print("Fits_Table Cluster [Cluster]")
+        #print(table_dict[nclus])
+        #print("\n\n fits_Table [index][y_col]")
+        #print(table_dict[nclus][y_col])
+        #print("\n\n non_clsuter_residual [y_col]")
+        #print(non_cluster_residual[y_col])
+        #print(zeropoint_dict)
+
+        '''
+        Commented code below is because it all relates to getting a zeropoint for a specific cluster and
+        removing all the datapoints that are not in the cluster. Since table_dict's tables are composed of
+        a single cluster for each one, there is no need for the flagging and resulting problems. Instead
+        Just using table_dict[nclus] gives the correct cluster to be used
+        '''
+        # So "z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")" basically makes ti so only the ones with
+        # ncllus are counted, everything else doesn't matter and so is set to a flag of 1000, to be removed later
+        #zeropoint_dict["z" + str(nclus)] = ((zeropoint_dict["z" + str(nclus)]) * (
+         #   table_dict[nclus][y_col]))
         # Ignore z values that are above 100.0
-        temp_zeropoint_dict = copy.deepcopy(zeropoint_dict)
-        for spot, value in enumerate(temp_zeropoint_dict["z" + str(nclus)]):
-            if value > 100.0:
-                temp_zeropoint_dict["z" + str(nclus)][spot] = numpy.float64("NaN")
+        #temp_zeropoint_dict = copy.deepcopy(zeropoint_dict)
+        #for spot, value in enumerate(temp_zeropoint_dict["z" + str(nclus)]):
+         #   if value > 100.0:
+          #      temp_zeropoint_dict["z" + str(nclus)][spot] = numpy.float64("NaN")
         n_zero = 0
-        print(temp_zeropoint_dict)
+        print(zeropoint_dict)
         if type_solution.lower() == "median":
             # use with delta and quartile
-            n_zero = numpy.nanmedian(temp_zeropoint_dict["z" + str(nclus)])
+            n_zero = numpy.nanmedian(zeropoint_dict["z" + str(nclus)])
         elif type_solution.lower() == "mean":
             # use with rms
-            n_zero = numpy.nanmean(temp_zeropoint_dict["z" + str(nclus)])
+            n_zero = numpy.nanmean(zeropoint_dict["z" + str(nclus)])
 
         print("Zero point for cluster  %-3d : %8.5f\n", nclus, n_zero)
+
+        # Copy the zeropoint values into the fits_table
+        # TODO make this only apply to those with the same nclus number
+        fits_table["ZEROPOINT"] = n_zero
+        # Possibly works
+        table_dict[nclus]["ZEROPOINT"] = n_zero
         # residuals normalized
         residuals(fits_table, n_norm, nclus, n_zero, zeropoint_dict)
     return fits_table
