@@ -129,8 +129,6 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
             if element['CLUSTER_NUMBER'] == i:
                 # This only adds the rows that have the same nclus, removing need for code later and flags
                 table_dict[i] = vstack([table_dict[i], fits_table[index]])
-        #table_dict[i].fill_value = 99999.9
-        #table_dict[i] = table_dict[i].filled()
 
     print(table_dict)
 
@@ -153,8 +151,6 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
                 non_cluster_residual = vstack([non_cluster_residual, table_dict[table]])
         print(non_cluster_residual)
 
-        # expression "//n_recol//"-"//n_a//"*"//n_sigcol//"-"//n_b//"*"//n_Iecol//"
-        # n_recol = y1, n_Iecol = x2_col, n_sigcol = x1_col
         n_recol = fits_table[y_col]
         n_Iecol = fits_table[x2_col]
         n_sigcol = fits_table[x1_col]
@@ -163,40 +159,6 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         array = zeropoint_dict["z" + str(nclus)].view(zeropoint_dict["z" + str(nclus)].dtype.fields
                                                      or zeropoint_dict["z" + str(nclus)].dtype, numpy.ndarray)
         zeropoint_dict["z" + str(nclus)] = array
-        '''
-        # delta y
-         n_expression="z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")"
-        print(n_expression, >tmpexp)
-        tcalc(tmpall,"z"//n_i,"@"//tmpexp,colfmt="f6.3")
-
-        So the expression maybe only calculates on the numerical columns for the zeropoint?
-
-        It says delta y right before the for loop in iterfitlin.cl so possibly only y_col matters for this
-        so then it is only numerical
-        '''
-        #print("Fits_Table Cluster [Cluster]")
-        #print(table_dict[nclus])
-        #print("\n\n fits_Table [index][y_col]")
-        #print(table_dict[nclus][y_col])
-        #print("\n\n non_clsuter_residual [y_col]")
-        #print(non_cluster_residual[y_col])
-        #print(zeropoint_dict)
-
-        '''
-        Commented code below is because it all relates to getting a zeropoint for a specific cluster and
-        removing all the datapoints that are not in the cluster. Since table_dict's tables are composed of
-        a single cluster for each one, there is no need for the flagging and resulting problems. Instead
-        Just using table_dict[nclus] gives the correct cluster to be used
-        '''
-        # So "z"//n_i//"*(nclus=="//n_i//")+1000.*(nclus!="//n_i//")" basically makes ti so only the ones with
-        # ncllus are counted, everything else doesn't matter and so is set to a flag of 1000, to be removed later
-        #zeropoint_dict["z" + str(nclus)] = ((zeropoint_dict["z" + str(nclus)]) * (
-         #   table_dict[nclus][y_col]))
-        # Ignore z values that are above 100.0
-        #temp_zeropoint_dict = copy.deepcopy(zeropoint_dict)
-        #for spot, value in enumerate(temp_zeropoint_dict["z" + str(nclus)]):
-         #   if value > 100.0:
-          #      temp_zeropoint_dict["z" + str(nclus)][spot] = numpy.float64("NaN")
         n_zero = 0
         print(zeropoint_dict)
         if type_solution.lower() == "median":
@@ -214,52 +176,26 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         # Possibly works
         table_dict[nclus]["ZEROPOINT"] = n_zero
         # residuals normalized
-        residuals(fits_table, n_norm, nclus, n_zero, zeropoint_dict)
+        residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict)
     return fits_table
 
 
-def residuals(fits_table, n_norm, cluster_number, n_zero, zeropoint_dict):
-    '''
-     n_expression="((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm//"+1000.*(nclus!="//n_i//")"
- print(n_expression, > tmpexp)
- tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3")
- delete(tmpexp,verify=no)
- n_expression="res+((z"//n_i//"-"//n_zero//")*(nclus=="//n_i//"))/"//n_norm
- print(n_expression, > tmpexp)
- tcalc(tmpall,"res","@"//tmpexp,colfmt="f6.3"
- delete(tmpexp,verify=no)
-    :param n_norm:
-    :return:
-    '''
-    # Should copy the original table, but independent, and then remove the current galaxies row
-    non_cluster_residual = fits_table.copy()
-    non_cluster_residual.remove_row(cluster_number)
-
-    non_cluster_residual = fits_table[:cluster_number] + fits_table[
-                                                         cluster_number + 1:]  # Potentially works, if it is a list
-    residual_data = ((zeropoint_dict[cluster_number] - n_zero) * (
-        fits_table[cluster_number])) / n_norm + 1000.0 * non_cluster_residual
-    # fits_data[nclud] gets row, if that's what needed
-    residual_number_col = fits.Column(name='r' + str(cluster_number), format='f6.3', array=residual_data)
-    # TODO: tcalc(tmpall,"r"//n_i,"@"//tmpexp,colfmt="f6.3") This seems to put the result into the residual, numbered by the cluster number, so neeed to add "residuals" thing
-    res_zeropoint = fits_table['res'] + ((zeropoint_dict[cluster_number] - n_zero) * (
-        fits_table[cluster_number])) / n_norm
-    # TODO: next tcalc puts it in the general residual line, so that is used the most
-    residual_number_all = fits.Column(name='res', format='f6.3', array=residual_data)
-    # new_columns = fits.ColDefs([residual_number_col, residual_number_all])
-    # new_table_hdu = fits.new_table(hdulist.columns + new_columns)
-    fits_table.add_column(residual_number_col)
-    fits_table.add_column(residual_number_all)
+def residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict):
+    residual_data = ((zeropoint_dict["z" + str(nclus)] - n_zero)) / n_norm
+    table_dict[nclus]["R" + str(nclus)] = residual_data
+    res_zeropoint = table_dict[nclus]["RESIDUAL"] + (
+                    (zeropoint_dict["z" + str(nclus)] - n_zero)) / n_norm
+    table_dict[nclus]["RESIDUAL"] = res_zeropoint
     # Debug stuff
 
     print("\n\n\n---------- Residual Things-----------\n")
     print("Table Res\n")
-    print(fits_table['res'])
+    print(table_dict[nclus]["RESIDUAL"])
     print("Table r<Cluster Number>\n")
-    print(fits_table[cluster_number])
+    print(table_dict[nclus])
     print("\n\n\n---------- Residual Things-----------\n\n\n\n")
     status = 0
-    return fits_table
+    return table_dict
 
 
 def line_solve():
