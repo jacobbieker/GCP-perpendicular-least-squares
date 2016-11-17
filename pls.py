@@ -2,8 +2,7 @@ __author__ = 'Jacob Bieker'
 import os, sys, random
 import numpy
 import pandas
-from astropy.table import Table, vstack, Column, pprint, TableColumns
-from astropy.io import fits
+from astropy.table import Table, vstack
 import copy
 import scipy.odr as odr
 from scipy.stats import linregress
@@ -70,11 +69,11 @@ def random_number(number, seed, nboot):
     return rand_nums
 
 
-def min_quartile(total_galaxies):
-    fits_table.sort("residual")
+def min_quartile(table, total_galaxies):
+    table.sort("RESIDUAL")
     low_num = total_galaxies / 4.0
     high_num = 3.0 * total_galaxies / 4.0
-    fits_residual = fits_table.field("residual")
+    fits_residual = table["RESIDUAL"]
     very_low_num = fits_residual[int(low_num - 0.5)]
     tab_value = fits_residual[int(low_num + 0.5)]
     very_low_num = (very_low_num + tab_value) * 2.0
@@ -85,8 +84,8 @@ def min_quartile(total_galaxies):
     return delta
 
 
-def min_delta(percentage, total_galaxies):
-    residuals = fits_table.field("residual")
+def min_delta(table, percentage, total_galaxies):
+    residuals = table["RESIDUAL"]
     absolute_residuals = []
     for residual in residuals:
         absolute_residual = abs(residual)
@@ -104,8 +103,8 @@ def min_delta(percentage, total_galaxies):
         return rms, delta
 
 
-def min_rms(percentage):
-    residuals = fits_table.field("residual")
+def min_rms(table, percentage):
+    residuals = table["RESIDUAL"]
     if percentage == 100:
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
         return rms
@@ -290,7 +289,7 @@ def bootstrap_initial(num_bootstrap):
         sb = 0
 
 
-def bootstrap_cluster():
+def bootstrap_cluster(table_dict):
     # Fit cluser with the most data to get an idea of where to iterate from
     '''
     for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
@@ -301,12 +300,13 @@ def bootstrap_cluster():
     '''
     rich_cluster = 0
     rich_members = 0
-    cluster_table = fits_table.group_by('cluster_number')
+    cluster_table = table_dict[1][[]]
     # Selects all the rows with the same cluster number and counts them to figure out which has the most
-    for key, group in zip(cluster_table.groups.keys, cluster_table.groups):
-        if len(group) > rich_members:
-            rich_members = len(group)
-            rich_cluster = key['cluster_number']
+    for key in table_dict.keys():
+        if len(table_dict[key]) > rich_members:
+            rich_members = len(table_dict[key])
+            rich_cluster = key
+            cluster_table = table_dict[key]
 
     # Fitting cluster to get rid of any NaN points
     if solve_plane:
@@ -315,11 +315,11 @@ def bootstrap_cluster():
     else
         tselect(tmpall,tmpsel,"nclus=="//n_rich//" && "//n_recol//"<99999. && "//n_sigcol//"<99999. && "//n_Iecol//"<99999.")
     tinfo(tmpsel,ttout-)
-    if(n_flprint)
-      printf("Number of galaxies fit in this cluster:  %3d\n",tinfo.nrows)
-    tfitlin(tmpsel,n_recol,n_sigcol,n_Iecol,rows="-",verbose=no, > tmpout)
-        # get the RMA coefficients
-        '''
+    '''
+    if printing:
+      print("Number of galaxies fit in this cluster:  %3d\n", rich_members)
+    tfitlin(tmpsel,n_recol,n_sigcol,n_Iecol,rows="-",verbose=False)
+    # get the RMA coefficients
     if res_choice == "y":
         return 0
         # On the 6th line from tfitlin, which goes to STDIN, fields takes the 3rd and 4th whitespace
@@ -349,7 +349,7 @@ def determine_uncertainty(solutions):
 
 
 def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
-                        flow_print, flow_a, flow_b):
+                        printing, flow_a, flow_b):
     m_a = a_factor_in / 200.0
     m_b = b_factor_in / 200.0
     if (a_factor <= m_a or a_iterations > max_iterations) and (
@@ -357,7 +357,7 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
             a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations):
         if not restart_factor:
             flow_end = True
-            flow_print = True
+            printing = True
             a_in = a_out
             b_in = b_out
             next_res()
@@ -368,15 +368,12 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
             a_factor_in /= 100.0
             b_factor_in /= 100.0
             max_iterations /= 2.0
-            if flow_print:
-                '''
-                if(n_flprint) {
-                      print("")
-                      printf("Restarting with (a,b)=(%7.4f,%7.4f)\n",n_a,n_b)
-                      printf("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n",n_factain,n_factbin)
-                      print("")
-                    }
-                '''
+            if printing:
+                print("")
+                print("Restarting with (a,b)=(%7.4f,%7.4f)\n",a_in,b_in)
+                print("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n",a_factor_in, b_factor_in)
+                print("")
+
             restart()
 
     # Change Coefficients
@@ -445,7 +442,7 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
                 change_coefficients()
 
 
-def tfitlin(table):
+def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
     # Fit line or plane by 3 or 4 different methods
     #
     # Fit:  y = a1*x+b
