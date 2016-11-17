@@ -279,16 +279,6 @@ def check_guess(cluster, type_solution, guess):
         # TODO: check guess with another cluster
 
 
-def bootstrap_initial(num_bootstrap):
-    flow_boot = False
-    if num_bootstrap > 0:
-        total_boot = num_bootstrap
-        ssa = 0
-        sa = 0
-        ssb = 0
-        sb = 0
-
-
 def bootstrap_cluster(table_dict):
     # Fit cluser with the most data to get an idea of where to iterate from
     '''
@@ -300,40 +290,52 @@ def bootstrap_cluster(table_dict):
     '''
     rich_cluster = 0
     rich_members = 0
-    cluster_table = table_dict[1][[]]
     # Selects all the rows with the same cluster number and counts them to figure out which has the most
     for key in table_dict.keys():
         if len(table_dict[key]) > rich_members:
             rich_members = len(table_dict[key])
             rich_cluster = key
-            cluster_table = table_dict[key]
+
+    if printing:
+        print("Cluster number with most data         :  %3d\n",rich_cluster)
+        print("Number of galaxies in this cluster    :  %3d\n", rich_members)
 
     # Fitting cluster to get rid of any NaN points
     if solve_plane:
-        '''
-    tselect(tmpall,tmpsel,"nclus=="//n_rich//" && "//n_recol//"<99999. && "//n_sigcol//"<99999.")
-    else
-        tselect(tmpall,tmpsel,"nclus=="//n_rich//" && "//n_recol//"<99999. && "//n_sigcol//"<99999. && "//n_Iecol//"<99999.")
-    tinfo(tmpsel,ttout-)
-    '''
+        # TODO Make mask that removees any points above 99999. for the fields
+        cluster_table = table_dict[rich_cluster]
+    else:
+        cluster_table = table_dict[rich_cluster]
+    # TODO Unsure what this does, seems to output column info into IRAF parameters tinfo(tmpsel,ttout-)
+
     if printing:
         print("Number of galaxies fit in this cluster:  %3d\n", rich_members)
-    tfitlin(tmpsel, n_recol, n_sigcol, n_Iecol, rows="-", verbose=False)
+    # Get the actual fitting done
+    odr_fit = tfitlin(cluster_table, y_col, x1_col, x2_col, rows="", verbose=False)
+    odr_fit.pprint()
     # get the RMA coefficients
     if res_choice == "y":
-        return 0
         # On the 6th line from tfitlin, which goes to STDIN, fields takes the 3rd and 4th whitespace
         # separated values in line 6
         # Scan scans in those values into n_a and n_b
         # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
         # scan(n_a,n_b)
+        # TODO Know these are wrong, figuring out what needs to be here for the factors
+        a_factor = odr_fit[3]
+        b_factor = odr_fit[4]
     else:
-        return 0
         # On the 3rd to last line from tfitlin, which goes to STDIN, fields takes the 2nd and 3rd whitespace
         # separated values
         # tail(tmpout,nlines=3) | fields("STDIN","2-3",lines="1") | \ scan(n_a, n_b)
+        # TODO Know these are wrong, figuring out what needs to be here for the factors
+        a_factor = odr_fit[2]
+        b_factor = odr_fit[3]
     if solve_plane:
         b_in = 0.0
+
+    if printing:
+        print("Initial values               (a,b)=(%7.4f,%7.4f)\n",a_factor,b_factor)
+        print("")
 
     if solve_plane:
         # If two parameter fit make the face zero column
@@ -570,4 +572,24 @@ if __name__ == "__main__":
     else:
         solve_plane = True
     fits_table, total_galaxies = read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col)
-    # min_delta(filename="rxj1226allfit.fits", percentage=100)
+
+    # Intialize bootstrap
+    flow_boot = False
+    if num_bootstrap > 0:
+        total_boot = num_bootstrap
+        ssa = 0
+        sa = 0
+        ssb = 0
+        sb = 0
+
+    print("")
+    print("Fitting technique : iterative, %s %s minimized, %s zero points\n",
+          res_choice,min_choice,zeropoint_choice)
+    print("Number of clusters: %4d\n",len(list_files)) # TODO Make sure this actually counts all clusters inputted
+    print("Number of galaxies: %4d\n",total_galaxies)
+    print(" (n_facta,n_bfact)=(%7.4f,%7.4f)\n",factor_change_a,factor_change_b)
+    print("Columns           : ", galaxy_name, group_name, y_col, x1_col, x2_col)
+    print("")
+
+    # Start bootstrap
+    bootstrap_cluster(table_dict=fits_table)
