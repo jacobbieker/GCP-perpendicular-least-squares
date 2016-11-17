@@ -56,6 +56,28 @@ import statsmodels.api as sm
 # finding the residual: delta =(logre -a*1og(J) - b*log<I>)/(1 + a^2 + b^2)^(1/2).
 
 
+
+def fits_to_dict(table, clusters):
+    # Split into the amount of tables for each cluster
+    table_dict = {}
+    for i in range(1, clusters + 1):
+        table_dict[i] = table[[]]
+        for index, element in enumerate(table):
+            if element['CLUSTER_NUMBER'] == i:
+                # This only adds the rows that have the same nclus, removing need for code later and flags
+                table_dict[i] = vstack([table_dict[i], table[index]])
+    return table_dict
+
+
+def dict_to_fits(dict, clusters):
+    # Recombining table_dict into a single table
+    fits_table = dict[1][[]]
+    for i in range(1, clusters + 1):
+        for key in dict.keys():
+            fits_table = vstack([fits_table, dict[key]])
+    return fits_table
+
+
 def random_number(number, seed, nboot):
     rand_nums = []
     if seed <= 0 or seed <= nboot:
@@ -120,15 +142,7 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
     # Adds a column full of zeros to the FITS table for use in residual
     fits_table['RESIDUAL'] = 0.0
 
-    # Split into the amount of tables for each cluster
-    table_dict = {}
-    for i in range(1, clusters+1):
-        table_dict[i] = fits_table[[]]
-        for index, element in enumerate(fits_table):
-            if element['CLUSTER_NUMBER'] == i:
-                # This only adds the rows that have the same nclus, removing need for code later and flags
-                table_dict[i] = vstack([table_dict[i], fits_table[index]])
-
+    table_dict = fits_to_dict(fits_table, clusters)
     print(table_dict)
 
     n_norm = 1.  # min in y
@@ -156,7 +170,7 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         expression = n_recol - a_factor * n_sigcol - b_factor * n_Iecol
         zeropoint_dict["z" + str(nclus)] = expression
         array = zeropoint_dict["z" + str(nclus)].view(zeropoint_dict["z" + str(nclus)].dtype.fields
-                                                     or zeropoint_dict["z" + str(nclus)].dtype, numpy.ndarray)
+                                                      or zeropoint_dict["z" + str(nclus)].dtype, numpy.ndarray)
         zeropoint_dict["z" + str(nclus)] = array
         n_zero = 0
         print(zeropoint_dict)
@@ -177,11 +191,7 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         # residuals normalized
         table_dict = residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict)
 
-    # Recombining table_dict into a single table
-    fits_table = table_dict[1][[]]
-    for i in range(1, clusters+1):
-        for key in table_dict.keys():
-                fits_table = vstack([fits_table, table_dict[key]])
+    fits_table = dict_to_fits(table_dict, clusters)
     print("Final FITS TABLE")
     print(fits_table)
     print("\n\n\n\n END FITS TABLE")
@@ -192,7 +202,7 @@ def residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict):
     residual_data = (zeropoint_dict["z" + str(nclus)] - n_zero) / n_norm
     table_dict[nclus]["R" + str(nclus)] = residual_data
     res_zeropoint = table_dict[nclus]["RESIDUAL"] + (
-                    (zeropoint_dict["z" + str(nclus)] - n_zero)) / n_norm
+                                                        (zeropoint_dict["z" + str(nclus)] - n_zero)) / n_norm
     table_dict[nclus]["RESIDUAL"] = res_zeropoint
     # Debug stuff
 
@@ -250,15 +260,15 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
                 newer_table = table.columns[galaxy_name, group_name, y_col, x1_col]
                 new_table = Table(newer_table)
             new_table['CLUSTER_NUMBER'] = cluster_number
-            #print("New Table")
-            #print(new_table)
+            # print("New Table")
+            # print(new_table)
             finished_table = vstack([finished_table, new_table])
         except (IOError):
             print("Cannot find " + str(filename))
             break
     total_galaxies = len(finished_table)
-    #print("Finished Table")
-    #print(finished_table)
+    # print("Finished Table")
+    # print(finished_table)
     return finished_table, total_galaxies
 
 
@@ -317,8 +327,8 @@ def bootstrap_cluster(table_dict):
     tinfo(tmpsel,ttout-)
     '''
     if printing:
-      print("Number of galaxies fit in this cluster:  %3d\n", rich_members)
-    tfitlin(tmpsel,n_recol,n_sigcol,n_Iecol,rows="-",verbose=False)
+        print("Number of galaxies fit in this cluster:  %3d\n", rich_members)
+    tfitlin(tmpsel, n_recol, n_sigcol, n_Iecol, rows="-", verbose=False)
     # get the RMA coefficients
     if res_choice == "y":
         return 0
@@ -353,8 +363,8 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
     m_a = a_factor_in / 200.0
     m_b = b_factor_in / 200.0
     if (a_factor <= m_a or a_iterations > max_iterations) and (
-        (b_factor <= m_b or b_iterations > max_iterations) or solve_plane) or (
-            a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations):
+                (b_factor <= m_b or b_iterations > max_iterations) or solve_plane) or (
+                    a_iterations > 3 * max_iterations or b_iterations > 3 * max_iterations):
         if not restart_factor:
             flow_end = True
             printing = True
@@ -370,8 +380,8 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
             max_iterations /= 2.0
             if printing:
                 print("")
-                print("Restarting with (a,b)=(%7.4f,%7.4f)\n",a_in,b_in)
-                print("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n",a_factor_in, b_factor_in)
+                print("Restarting with (a,b)=(%7.4f,%7.4f)\n", a_in, b_in)
+                print("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n", a_factor_in, b_factor_in)
                 print("")
 
             restart()
@@ -530,6 +540,7 @@ if __name__ == "__main__":
     a_out = 0
     b_out = 0
     restart_factor = False
+    printing = True
 
     filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
