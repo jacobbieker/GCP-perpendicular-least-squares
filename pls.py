@@ -163,13 +163,6 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
     table_dict = fits_to_dict(fits_table, clusters)
     print(table_dict)
 
-    n_norm = 1.  # min in y
-    if res_choice == "per":
-        n_norm = numpy.sqrt(1.0 + a_factor ** 2 + b_factor ** 2)  # min perpendicular
-    if res_choice == "x1":
-        n_norm = -1.0 * a_factor  # min in x1
-    if res_choice == "x2":
-        n_norm = -1.0 * b_factor  # min in x2
     for nclus in table_dict.keys():
         zeropoint_dict = {}
 
@@ -197,6 +190,7 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
 
         # Copy the zeropoint values into the fits_table
         table_dict[nclus]["ZEROPOINT"] = n_zero
+        table_dict[nclus]["Z" + str(nclus)] = zeropoint_dict["z" + str(nclus)]
         # residuals normalized
         table_dict = residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict)
 
@@ -404,7 +398,7 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
     if flow_b:
         b_in *= 1.0 * sig_b * b_factor
         b_iterations += 1
-    end = False # TODO make sure this doesn't mess anything up
+    end = False  # TODO make sure this doesn't mess anything up
     next_res(min_choice, total_galaxies, end)
 
     return 0
@@ -442,7 +436,8 @@ def restart(printing, end):
 
 
 def next_res(min_choice, total_galaxies, end):
-    zeropooint_table = zeropoint(fits_table, clusters, zeropoint_choice, res_choice, y_col, x1_col, x2_col, a_factor, b_factor, solve_plane)
+    zeropooint_table = zeropoint(fits_table, clusters, zeropoint_choice, res_choice, y_col, x1_col, x2_col, a_factor,
+                                 b_factor, solve_plane)
 
     # Minimize
     if min_choice == "quartile":
@@ -492,12 +487,14 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
             if flow_a and (a_iterations == 1 or flow_first):
                 sig_a = -sig_b
                 flow_first = False
-                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations,
+                                    restart_factor,
                                     printing, flow_a, flow_b)
             if flow_b and (b_iterations == 1 or flow_first):
                 sig_b = -sig_b
                 flow_first = False
-                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations,
+                                    restart_factor,
                                     printing, flow_a, flow_b)
             if (a_iterations > 1 or b_iterations > 1) and not flow_first:
                 if not solve_plane:
@@ -510,7 +507,8 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
                     a_factor /= 2.0
                 if flow_b and b_iterations > 1:
                     b_factor /= 2.0
-                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
+                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations,
+                                    restart_factor,
                                     printing, flow_a, flow_b)
 
 
@@ -588,65 +586,72 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
         return out
 
 
-def cleanup():
+def cleanup(table):
+    table_dict = fits_to_dict(table, clusters)
+    if end and not flow_boot:
+        print(" ")
+        print("Cluster no.  Ngal     zero    n_rms    y_rms\n")
+        for nclus in table_dict.keys():
+            # zero point in tables not normalized
+            if zeropoint_choice.lower() == "median":
+                zero = numpy.nanmedian(table_dict[nclus]["Z" + str(nclus)])
+            else:
+                zero = numpy.nanmean(table_dict[nclus]["Z" + str(nclus)])
+            rms = numpy.std(table_dict[nclus]["Z" + str(nclus)]) * numpy.sqrt(
+                (len(table_dict[nclus]["Z" + str(nclus)]) - 1.) / (len(table_dict[nclus]["Z" + str(nclus)]) - 3.))
+            lrerms = rms
+            rms = rms / abs(n_norm)  # normalized
+            print("   %3d       %3d  %8.5f %8.5f %8.5f\n", nclus, len(table_dict[nclus]), zero, rms, lrerms)
+
+        table = dict_to_fits(table_dict, clusters)
+        # residuals in table normalized
+        if zeropoint_choice == "median":
+            zero = numpy.nanmedian(table["RESIDUAL"])
+        else:
+            zero = numpy.nanmean(table["RESIDUAL"])
+        rms = numpy.std(table["RESIDUAL"]) * numpy.sqrt((len(table["RESIDUAL"]) - 1.) / (len(table["RESIDUAL"]) - 3.))
+        lrerms = rms * abs(n_norm)
+        print("   All       %3d  %8.5f %8.5f %8.5f\n", len(table["RESIDUAL"]), zero, rms, lrerms)
+
+    if num_bootstrap > 0:
+        #tdelete(tmpsel//","//tmpboo,verify=no, >>& "/dev/null")
+        #delete(tmpran,verify=no, >>& "/dev/null")
+
+        flow_boot=True
+        n_flprint=False
+        # n_flboot=yes ; n_flprint=yes  # test printout
+        a_in = a_out
+        b_in = b_out
+        a_factor_in = n_factas
+        b_factor_in = n_factbs
+        max_iterations = iterations    # reset maxiter
+        n_restart = restart    # enable restart again if it originally was
+
+        # if 2 parameter fit, reset n_Iecol
+        if not solve_plane:
+            n_Iecol=""
+        if num_bootstrap == total_boot:
+            print("")
+            print("Output from bootstrap samples")
+            print("")
+        if(num_bootstrap < total_boot:
+            n_ssa += a_out**2
+            n_sa += a_out
+            n_ssb += b_out**2
+            n_sb += b_out
+
+        random(n_totgal,seed=(n_seed-n_nboot), > tmpran)
+        random_number(total_galaxies, seed=(rand_seed - num_bootstrap), num_bootstrap)
+        tcalc(tmpran,"c1","int(1.+c1*"//n_totgal//")",colfmt="i6")
+        tsort(tmpran,"c1",ascend=yes)
+        tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
+        tmpall=tmpboo
+        num_bootstrap -= 1
+        bootstrap()
+
+
     """
     # cleanup and final zero point, rms for each cluster, total rms
-if(n_flprint && !n_flboot) {
-print("")
-
-printf("Cluster no.  Ngal     zero    n_rms    y_rms\n")
-for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
-# zero point in tables not normalized
- tstat(tmpall,"z"//n_i,lowlim=INDEF,highlim=100., >> "/dev/null")
- if(n_zeropoint=="median")
-   n_zero=tstat.median
- else
-   n_zero=tstat.mean
- n_rms=tstat.stddev*sqrt((tstat.nrows-1.)/(tstat.nrows-3.))
- n_lrerms=n_rms
- n_rms=n_rms/abs(n_norm)   # normalized
- printf("   %3d       %3d  %8.5f %8.5f %8.5f\n",n_i,tstat.nrows,n_zero,n_rms,n_lrerms)
-}
-
-# residuals in table normalized
-tstat(tmpall,"res",lowlim=INDEF,highlim=INDEF, >> "/dev/null")
-if(n_zeropoint=="median")
-  n_zero=tstat.median
-else
-  n_zero=tstat.mean
-n_rms=tstat.stddev*sqrt((tstat.nrows-1.)/(tstat.nrows-3.))
-n_lrerms=n_rms*abs(n_norm)
-printf("   All       %3d  %8.5f %8.5f %8.5f\n",tstat.nrows,n_zero,n_rms,n_lrerms)
-}
-
-if(n_nboot>0) {
- tdelete(tmpsel//","//tmpboo,verify=no, >>& "/dev/null")
- delete(tmpran,verify=no, >>& "/dev/null")
- n_flboot=yes ; n_flprint=no
-# n_flboot=yes ; n_flprint=yes  # test printout
- n_a=n_aout ; n_b=n_bout ; n_factain=n_factas ; n_factbin=n_factbs
-  n_maxiter=maxiter    # reset maxiter
-  n_restart=restart    # enable restart again if it originally was
-# if 2 parameter fit, reset n_Iecol
- if(n_twopar)
-   n_Iecol=""
- if(n_nboot==n_totboot) {
-   print("")
-   print("Output from bootstrap samples")
-   print("")
- }
- if(n_nboot<n_totboot) {
-  n_ssa+=n_aout*n_aout ; n_sa+=n_aout
-  n_ssb+=n_bout*n_bout ; n_sb+=n_bout
- }
- random(n_totgal,seed=(n_seed-n_nboot), > tmpran)
- tcalc(tmpran,"c1","int(1.+c1*"//n_totgal//")",colfmt="i6")
- tsort(tmpran,"c1",ascend=yes)
- tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
- tmpall=tmpboo
- n_nboot-=1
- goto bootstrap
-}
 
 if(n_flboot) {
  tdelete(tmpsel,verify=no, >>& "/dev/null")
@@ -698,7 +703,6 @@ if __name__ == "__main__":
     b_in = 0.0
     end = False
 
-
     filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
@@ -748,6 +752,14 @@ if __name__ == "__main__":
         sa = 0
         ssb = 0
         sb = 0
+
+    n_norm = 1.  # min in y
+    if res_choice == "per":
+        n_norm = numpy.sqrt(1.0 + a_factor ** 2 + b_factor ** 2)  # min perpendicular
+    if res_choice == "x1":
+        n_norm = -1.0 * a_factor  # min in x1
+    if res_choice == "x2":
+        n_norm = -1.0 * b_factor  # min in x2
 
     print("")
     print("Fitting technique : iterative, %s %s minimized, %s zero points\n",
