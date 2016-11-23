@@ -692,31 +692,26 @@ def cleanup(table):
         bootstrap(table_dict=table)
 
 
-    """
     # cleanup and final zero point, rms for each cluster, total rms
 
-if(n_flboot) {
- tdelete(tmpsel,verify=no, >>& "/dev/null")
- delete(tmpran,verify=no, >>& "/dev/null")
-# add the last output
- n_ssa+=n_aout*n_aout ; n_sa+=n_aout
- n_ssb+=n_bout*n_bout ; n_sb+=n_bout
- print(n_sa,n_ssa,n_sb,n_ssb)
- n_ssa=n_ssa/n_totboot ; n_sa=n_sa/n_totboot
- n_ssb=n_ssb/n_totboot ; n_sb=n_sb/n_totboot
- n_ea=sqrt( n_totboot*(n_ssa-n_sa*n_sa)/(n_totboot-1) )
- n_eb=sqrt( n_totboot*(n_ssb-n_sb*n_sb)/(n_totboot-1) )
- print("")
- printf("Bootstrap uncertainties based on  %5d  determinations\n",
-   n_totboot)
- printf("   e_a=%7.4f  e_b=%7.4f\n",n_ea,n_eb)
- tdelete(tmpboo,verify=no)
-}
-
-tdelete(n_taball,verify=no)
-    :return:
-    """
-
+    if flow_boot:
+        # add the last output
+        n_ssa+= a_out*a_out
+        n_sa+=a_out
+        n_ssb+=b_out*b_out
+        n_sb+=b_out
+        print(n_sa,n_ssa,n_sb,n_ssb)
+        n_ssa=n_ssa/total_boot
+        n_sa=n_sa/total_boot
+        n_ssb=n_ssb/total_boot
+        n_sb=n_sb/total_boot
+        n_ea=numpy.sqrt( total_boot*(n_ssa-n_sa*n_sa)/(total_boot-1) )
+        n_eb=numpy.sqrt( total_boot*(n_ssb-n_sb*n_sb)/(total_boot-1) )
+        print("")
+        print("Bootstrap uncertainties based on  %5d  determinations\n",
+           total_boot)
+        print("   e_a=%7.4f  e_b=%7.4f\n",n_ea,n_eb)
+    return 0
 
 if __name__ == "__main__":
 
