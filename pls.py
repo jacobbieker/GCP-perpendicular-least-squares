@@ -78,48 +78,51 @@ def dict_to_fits(dict, clusters):
     return fits_table
 
 
-def random_number(number, seed, nboot):
-    rand_nums = []
+def random_number(number, seed):
+
+    def ran_num(seed):
+        ia=16807
+        im=2147483647
+        am=1./im
+        iq=127773
+        ir=2836
+        ntab=32
+        ndiv=1+(im-1)/ntab
+        eps=1.2e-7
+        rnmx=1.-eps
+        iy = 0
+        iv = numpy.zeros(ntab)
+        if seed < 0 or iy == 0:
+            seed = max(-seed, 1)
+            for j in range(ntab+8, 1, -1):
+                k = seed / iq
+                seed = ia*(seed - k*iq)-ir*k
+                if seed < 0:
+                    seed = seed + im
+                if j < ntab:
+                    iv[j] = seed
+            iy = iv[1]
+
+        k=seed/iq
+        seed=ia*(seed-k*iq)-ir*k
+        if seed < 0:
+            seed=seed+im
+        j=1+iy/ndiv
+        iy=iv[j]
+        iv[j]=seed
+        ran1=min(am*iy,rnmx)
+        return ran1
+
     # random.cl part
     if seed <= 0:
         seed = seed * seed + 1
+
     # random.f part
     if seed > 0:
         seed = -seed
-
-    # ran1.f part: go for every number in number of galaxies
-    # iv = NTAB * 0 iy = 0
-    ia=16807
-    im=2147483647
-    am=1./im
-    iq=127773
-    ir=2836
-    ntab=32
-    ndiv=1+(im-1)/ntab
-    eps=1.2e-7
-    rnmx=1.-eps
-    iy = 0
-    iv = numpy.zeros(ntab)
-    if seed < 0 or iy == 0:
-        seed = max(-seed, 1)
-        for j in range(ntab+8, 1, -1):
-            k = seed / iq
-            seed = ia*(seed - k*iq)-ir*k
-            if seed < 0:
-                seed = seed + im
-            if j < ntab:
-                iv[j] = seed
-        iy = iv[1]
-
-    k=seed/iq
-    seed=ia*(seed-k*iq)-ir*k
-    if seed < 0:
-        seed=seed+im
-    j=1+iy/ndiv
-    iy=iv[j]
-    iv[j]=seed
-    ran1=min(am*iy,rnmx)
-    rand_nums.append(ran1)
+    rand_nums = []
+    for i in range(1, total_galaxies):
+        rand_nums.append(ran_num(seed))
     return rand_nums
 
 
