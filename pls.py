@@ -80,14 +80,46 @@ def dict_to_fits(dict, clusters):
 
 def random_number(number, seed, nboot):
     rand_nums = []
-    if seed <= 0 or seed <= nboot:
-        seed = max(seed * seed, (seed + 1) * (nboot + 1))
-    elif seed > 0:
+    # random.cl part
+    if seed <= 0:
+        seed = seed * seed + 1
+    # random.f part
+    if seed > 0:
         seed = -seed
-    random.seed(a=seed)
-    for i in range(number):
-        rand_num = random.random()
-        rand_nums.append(rand_num)
+
+    # ran1.f part: go for every number in number of galaxies
+    # iv = NTAB * 0 iy = 0
+    ia=16807
+    im=2147483647
+    am=1./im
+    iq=127773
+    ir=2836
+    ntab=32
+    ndiv=1+(im-1)/ntab
+    eps=1.2e-7
+    rnmx=1.-eps
+    iy = 0
+    iv = numpy.zeros(ntab)
+    if seed < 0 or iy == 0:
+        seed = max(-seed, 1)
+        for j in range(ntab+8, 1, -1):
+            k = seed / iq
+            seed = ia*(seed - k*iq)-ir*k
+            if seed < 0:
+                seed = seed + im
+            if j < ntab:
+                iv[j] = seed
+        iy = iv[1]
+
+    k=seed/iq
+    seed=ia*(seed-k*iq)-ir*k
+    if seed < 0:
+        seed=seed+im
+    j=1+iy/ndiv
+    iy=iv[j]
+    iv[j]=seed
+    ran1=min(am*iy,rnmx)
+    rand_nums.append(ran1)
     return rand_nums
 
 
@@ -634,7 +666,7 @@ def cleanup(table):
             print("")
             print("Output from bootstrap samples")
             print("")
-        if(num_bootstrap < total_boot:
+        if num_bootstrap < total_boot:
             n_ssa += a_out**2
             n_sa += a_out
             n_ssb += b_out**2
@@ -642,6 +674,7 @@ def cleanup(table):
 
         random(n_totgal,seed=(n_seed-n_nboot), > tmpran)
         random_number(total_galaxies, seed=(rand_seed - num_bootstrap), num_bootstrap)
+        # Creates random numbers and randomizes the order of the galaxies
         tcalc(tmpran,"c1","int(1.+c1*"//n_totgal//")",colfmt="i6")
         tsort(tmpran,"c1",ascend=yes)
         tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
