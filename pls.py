@@ -121,7 +121,7 @@ def random_number(number, seed):
     if seed > 0:
         seed = -seed
     rand_nums = []
-    for i in range(1, total_galaxies):
+    for i in range(1, number):
         rand_nums.append(ran_num(seed))
     return rand_nums
 
@@ -304,6 +304,7 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
             print("Cannot find " + str(filename))
             break
     total_galaxies = len(finished_table)
+    finished_table["ROW"] = numpy.arange(1, total_galaxies)
     # print("Finished Table")
     # print(finished_table)
     return finished_table, total_galaxies
@@ -675,15 +676,20 @@ def cleanup(table):
             n_ssb += b_out**2
             n_sb += b_out
 
-        random(n_totgal,seed=(n_seed-n_nboot), > tmpran)
-        random_number(total_galaxies, seed=(rand_seed - num_bootstrap), num_bootstrap)
+        rand_nums = random_number(total_galaxies, seed=(rand_seed - num_bootstrap), num_bootstrap)
         # Creates random numbers and randomizes the order of the galaxies
-        tcalc(tmpran,"c1","int(1.+c1*"//n_totgal//")",colfmt="i6")
-        tsort(tmpran,"c1",ascend=yes)
-        tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
-        tmpall=tmpboo
+        for index, num in enumerate(rand_nums):
+            table["C1"][index] = int(1.0 + num)
+
+        # Sort by C1 and then reverse to get by ascending
+        table.sort("C1")
+        table.reverse()
+        # TODO: Figure out c1* does tcalc(tmpran,"c1","int(1.+c1*"//n_totgal//")",colfmt="i6")
+        # tsort(tmpran,"c1",ascend=yes)
+        #tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
+        table["ROW"] = table["C1"]
         num_bootstrap -= 1
-        bootstrap()
+        bootstrap(table_dict=table)
 
 
     """
