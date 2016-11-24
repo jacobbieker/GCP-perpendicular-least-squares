@@ -323,7 +323,7 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
             print("Cannot find " + str(filename))
             break
     gal_total = len(finished_table)
-    finished_table["ROW"] = numpy.arange(1, gal_total)
+    finished_table["ROW"] = numpy.arange(0, gal_total)
     # print("Finished Table")
     # print(finished_table)
     return finished_table, gal_total
@@ -589,12 +589,12 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
     def f3(B, x):
         return B[0] * x + B[1] * x + B[2]
 
-    intable = str(input("Input Table: "))
-    y_col_in = str(input("Y column name, log r") or "logre_r")
-    x1_col_in = str(input("X1 column name, log sigma") or "logsig_lit")
-    x2_col_in = str(input("X2 column name, surface brightness") or "<mu_r>e")
-    rows_in = str(input("Rows: ") or "")
-    verbose_in = bool(input("Verbose") or False)
+    #intable = str(input("Input Table: "))
+    #y_col_in = str(input("Y column name, log r") or "logre_r")
+    #x1_col_in = str(input("X1 column name, log sigma") or "logsig_lit")
+    #x2_col_in = str(input("X2 column name, surface brightness") or "<mu_r>e")
+    #rows_in = str(input("Rows: ") or "")
+    #verbose_in = bool(input("Verbose") or False)
 
     if rows == "":
         data = table[y_col, x1_col, x2_col]
@@ -722,8 +722,6 @@ def cleanup(table):
 
 
 if __name__ == "__main__":
-    global sa, ssa, sb, ssb, factas, factbs
-
     filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"

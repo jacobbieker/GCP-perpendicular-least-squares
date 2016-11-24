@@ -38,7 +38,7 @@ class TestProgram(unittest.TestCase):
         coma_table_three, coma_galaxies_three = pls.read_clusters(["comafit.fits"], True, "GALAXY", "GROUP", y_col, x1_col, x2_col)
         #coma_table_two, coma_galaxies_two = pls.read_clusters(["comafit.fits"], False, "GALAXY", "GROUP", y_col, x1_col, x2_col)
 
-        results_1 = pls.zeropoint(coma_table_three, cluster, type_solution[0], res_choice[0], y_col, x1_col, x2_col, a_factor, b_factor)
+        results_1 = pls.zeropoint(coma_table_three, cluster, type_solution[0], res_choice[0], y_col, x1_col, x2_col, a_factor, b_factor, True)
         #results_2 = pls.zeropoint(coma_table_two, cluster, type_solution[1], res_choice[1], y_col, x1_col, x2_col, a_factor, b_factor)
 
         #self.assertNotEqual(results_1, results_2)
@@ -56,7 +56,7 @@ class TestProgram(unittest.TestCase):
         coma_table_three, coma_galaxies_three = pls.read_clusters(["comafit.fits"], True, "GALAXY", "GROUP", y_col, x1_col, x2_col)
         #coma_table_two, coma_galaxies_two = pls.read_clusters(["comafit.fits"], False, "GALAXY", "GROUP", y_col, x1_col, x2_col)
 
-        results_1 = pls.zeropoint(coma_table_three, cluster, type_solution[0], res_choice[0], y_col, x1_col, x2_col, a_factor, b_factor)
+        results_1 = pls.zeropoint(coma_table_three, cluster, type_solution[0], res_choice[0], y_col, x1_col, x2_col, a_factor, b_factor, True)
         #results_2 = pls.zeropoint(coma_table_two, cluster, type_solution[1], res_choice[1], y_col, x1_col, x2_col, a_factor, b_factor)
 
         residuals_1 = pls.residuals(results_1[4], results_1[0], results_1[1], results_1[2], results_1[3])
