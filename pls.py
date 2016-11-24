@@ -9,7 +9,6 @@ from scipy.stats import linregress
 from statsmodels.formula.api import ols
 import statsmodels.api as sm
 
-
 # Fit plane or line iteratively
 #   if more than one cluster, each cluster in separate STSDAS table
 #
@@ -69,6 +68,13 @@ b_out = 0.0
 restart_factor = False
 printing = True
 
+factas = 0.0
+factbs = 0.0
+ssb = 0
+ssa = 0
+sb = 0
+sa = 0
+
 # Initalizing variables
 very_low_in = 0
 very_high_in = 0
@@ -103,38 +109,37 @@ def dict_to_fits(dict, clusters):
 
 
 def random_number(number, seed):
-
     def ran_num(seed):
-        ia=16807
-        im=2147483647
-        am=1./im
-        iq=127773
-        ir=2836
-        ntab=32
-        ndiv=1+(im-1)/ntab
-        eps=1.2e-7
-        rnmx=1.-eps
+        ia = 16807
+        im = 2147483647
+        am = 1. / im
+        iq = 127773
+        ir = 2836
+        ntab = 32
+        ndiv = 1 + (im - 1) / ntab
+        eps = 1.2e-7
+        rnmx = 1. - eps
         iy = 0
         iv = numpy.zeros(ntab)
         if seed < 0 or iy == 0:
             seed = max(-seed, 1)
-            for j in range(ntab+8, 1, -1):
+            for j in range(ntab + 8, 1, -1):
                 k = seed / iq
-                seed = ia*(seed - k*iq)-ir*k
+                seed = ia * (seed - k * iq) - ir * k
                 if seed < 0:
                     seed = seed + im
                 if j < ntab:
                     iv[j] = seed
             iy = iv[1]
 
-        k=seed/iq
-        seed=ia*(seed-k*iq)-ir*k
+        k = seed / iq
+        seed = ia * (seed - k * iq) - ir * k
         if seed < 0:
-            seed=seed+im
-        j=1+iy/ndiv
-        iy=iv[j]
-        iv[j]=seed
-        ran1=min(am*iy,rnmx)
+            seed = seed + im
+        j = 1 + iy / ndiv
+        iy = iv[j]
+        iv[j] = seed
+        ran1 = min(am * iy, rnmx)
         return ran1
 
     # random.cl part
@@ -277,16 +282,6 @@ def residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict):
     return table_dict
 
 
-def line_solve():
-    # TODO: Find the Least Squares for a line
-    return 0
-
-
-def plane_solve():
-    # TODO: Find the least Squares for a plane
-    return 0
-
-
 def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col):
     '''
     Reads in the FITS file and creates one table from the different tables and counts the
@@ -334,32 +329,9 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
     return finished_table, gal_total
 
 
-def initial_guess(largest_cluster, type_solution):
-    if type_solution == "line":
-        return 0
-    elif type_solution == "plane":
-        return 0
-    # TODO: Get an inital guess from the perpendicular least squares method from the largest cluster
-    return
-
-
-def check_guess(cluster, type_solution, guess):
-    if type_solution == "line":
-        return 0
-    elif type_solution == "plane":
-        return 0
-        # TODO: check guess with another cluster
-
-
 def bootstrap_cluster(table_dict):
+    global printing, a_in, b_in, solve_plane
     # Fit cluser with the most data to get an idea of where to iterate from
-    '''
-    for(n_i=1 ; n_i<=n_clus ; n_i+=1) {
- tstat(tmpall,"nclus",lowlim=n_i,highlim=n_i, >> "/dev/null")
-    :param cluster:
-    :param num_bootstrap:
-    :return:
-    '''
     rich_cluster = 0
     rich_members = 0
     # Selects all the rows with the same cluster number and counts them to figure out which has the most
@@ -417,8 +389,10 @@ def bootstrap_cluster(table_dict):
     return 0
 
 
-def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
-                        printing, flow_a, flow_b):
+def change_coefficients():
+    global a_factor_in, b_factor_in, a_iterations, b_iterations, max_iterations, restart_factor
+    global printing, flow_a, flow_b, a_in, b_in, end
+
     m_a = a_factor_in / 200.0
     m_b = b_factor_in / 200.0
     if (a_factor <= m_a or a_iterations > max_iterations) and (
@@ -429,7 +403,7 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
             printing = True  # ensure printing of last coefficient
             a_in = a_out
             b_in = b_out
-            next_res(min_choice, total_galaxies, end)
+            next_res()
         else:
             end = False
             restart_factor = False
@@ -444,7 +418,7 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
                 print("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n", a_factor_in, b_factor_in)
                 print("")
 
-            restart(printing, end)
+            restart()
 
     # Change Coefficients
     if flow_a:
@@ -454,12 +428,13 @@ def change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, 
         b_in *= 1.0 * sig_b * b_factor
         b_iterations += 1
     end = False  # TODO make sure this doesn't mess anything up
-    next_res(min_choice, total_galaxies, end)
+    next_res()
 
     return 0
 
 
-def restart(printing, end):
+def restart():
+    global a_iterations, b_iterations, flow_a, flow_b, a_factor, b_factor, sig_a, sig_b, flow_first, printing
     if printing:
         if min_choice == "quartile":
             print(" ----a----   ----b----\n")
@@ -477,20 +452,21 @@ def restart(printing, end):
             print(" ----a----   ----b----\n")
             print("  i  fact     i  fact     a       b         rms      N(rms)\n")
 
-    n_itera = 1
-    n_iterb = 1
-    n_fla = True
-    n_flb = False
-    n_facta = factor_change_a
-    n_factb = factor_change_b
-    n_signa = 1.
-    n_signb = 1
-    n_flfirst = True
+    a_iterations = 1
+    b_iterations = 1
+    flow_a = True
+    flow_b = False
+    a_factor = factor_change_a
+    b_factor = factor_change_b
+    sig_a = 1.
+    sig_b = 1.
+    flow_first = True
 
-    next_res(min_choice, total_galaxies, end)
+    next_res()
 
 
-def next_res(min_choice, total_galaxies, end):
+def next_res():
+    global min_choice, total_galaxies, end
     zeropooint_table = zeropoint(fits_table, clusters, zeropoint_choice, res_choice, y_col, x1_col, x2_col, a_factor,
                                  b_factor, solve_plane)
 
@@ -507,16 +483,28 @@ def next_res(min_choice, total_galaxies, end):
         delta = min_rms(zeropooint_table, 60)
 
     if end:
-        cleanup()
+        cleanup(zeropooint_table)
     else:
-        determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta,
-                                      sig_a, sig_b, very_low_in, very_high_in, min_choice, flow_a, flow_b, a_out, b_out)
+        determine_change_coefficients(min_choice, delta)
     return 0
 
 
-def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor, delta_out, a_in, b_in, delta_in,
-                                  sig_a, sig_b, very_low_in, very_high_in, minimization_algorithm, flow_a, flow_b,
-                                  a_out, b_out):
+def determine_change_coefficients(minimization_algorithm, delta_in):
+    global a_out, a_in
+    global delta_out, flow_first
+    global sig_a, sig_b
+    global very_low_in, very_high_in
+    global a_factor, b_factor
+    global a_iterations, b_iterations
+    global b_out, b_in
+    global flow_a, flow_b
+    global a_factor_in
+    global b_factor_in
+    global max_iterations
+    global flow_boot
+    global num_bootstrap
+    global ssa, sb
+    global ssb, sa
     if a_iterations == 1 and b_iterations == 1:
         a_out = a_in
         b_out = b_in
@@ -533,8 +521,7 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
             if minimization_algorithm == "quartile":
                 very_low_out = very_low_in
                 very_high_out = very_high_in
-            change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations, restart_factor,
-                                printing, flow_a, flow_b)
+            change_coefficients()
         if delta_in > delta_out and a_factor > a_factor_in / 200.0 and (b_factor > b_factor_in / 200.0 or solve_plane):
             # Change the current coefficients back to previous values
             a_in = a_out
@@ -542,15 +529,11 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
             if flow_a and (a_iterations == 1 or flow_first):
                 sig_a = -sig_b
                 flow_first = False
-                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations,
-                                    restart_factor,
-                                    printing, flow_a, flow_b)
+                change_coefficients()
             if flow_b and (b_iterations == 1 or flow_first):
                 sig_b = -sig_b
                 flow_first = False
-                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations,
-                                    restart_factor,
-                                    printing, flow_a, flow_b)
+                change_coefficients()
             if (a_iterations > 1 or b_iterations > 1) and not flow_first:
                 if not solve_plane:
                     # Change the other coefficient
@@ -562,9 +545,7 @@ def determine_change_coefficients(a_iterations, b_iterations, a_factor, b_factor
                     a_factor /= 2.0
                 if flow_b and b_iterations > 1:
                     b_factor /= 2.0
-                change_coefficients(a_factor_in, b_factor_in, a_iterations, max_iterations, b_iterations,
-                                    restart_factor,
-                                    printing, flow_a, flow_b)
+                change_coefficients()
 
 
 def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
@@ -641,7 +622,16 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
         return out
 
 
-def cleanup(table, num_bootstrap, ssa, ssb, sa, sb, flow_boot):
+def cleanup(table):
+    global a_in
+    global b_in
+    global a_factor_in
+    global b_factor_in
+    global max_iterations
+    global flow_boot
+    global num_bootstrap
+    global ssa, sb
+    global ssb, sa
     table_dict = fits_to_dict(table, clusters)
     if end and not flow_boot:
         print(" ")
@@ -669,28 +659,28 @@ def cleanup(table, num_bootstrap, ssa, ssb, sa, sb, flow_boot):
         print("   All       %3d  %8.5f %8.5f %8.5f\n", len(table["RESIDUAL"]), zero, rms, lrerms)
 
     if num_bootstrap > 0:
-        flow_boot=True
-        n_flprint=False
+        flow_boot = True
+        n_flprint = False
         # n_flboot=yes ; n_flprint=yes  # test printout
         a_in = a_out
         b_in = b_out
         # Reset to original factor in
         a_factor_in = factas
         b_factor_in = factbs
-        max_iterations = iterations    # reset maxiter
-        n_restart = restart    # enable restart again if it originally was
+        max_iterations = iterations  # reset maxiter
+        n_restart = restart  # enable restart again if it originally was
 
         # if 2 parameter fit, reset n_Iecol
         if not solve_plane:
-            n_Iecol=""
+            n_Iecol = ""
         if num_bootstrap == total_boot:
             print("")
             print("Output from bootstrap samples")
             print("")
         if num_bootstrap < total_boot:
-            ssa += a_out**2
+            ssa += a_out ** 2
             sa += a_out
-            ssb += b_out**2
+            ssb += b_out ** 2
             sb += b_out
 
         rand_nums = random_number(total_galaxies, seed=(rand_seed - num_bootstrap))
@@ -704,34 +694,35 @@ def cleanup(table, num_bootstrap, ssa, ssb, sa, sb, flow_boot):
         table.reverse()
         # TODO: Figure out c1* does tcalc(tmpran,"c1","int(1.+c1*"//n_totgal//")",colfmt="i6")
         # tsort(tmpran,"c1",ascend=yes)
-        #tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
+        # tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
         table["ROW"] = table["C1"]
         num_bootstrap -= 1
         bootstrap_cluster(table_dict=table)
-
 
     # cleanup and final zero point, rms for each cluster, total rms
 
     if flow_boot:
         # add the last output
-        ssa+= a_out*a_out
-        sa+=a_out
-        ssb+=b_out*b_out
-        sb+=b_out
-        print(sa,ssa,sb,ssb)
+        ssa += a_out * a_out
+        sa += a_out
+        ssb += b_out * b_out
+        sb += b_out
+        print(sa, ssa, sb, ssb)
         ssa /= total_boot
         sa /= total_boot
         ssb /= total_boot
         sb /= total_boot
-        n_ea=numpy.sqrt( total_boot*(ssa-sa*sa)/(total_boot-1) )
-        n_eb=numpy.sqrt( total_boot*(ssb-sb*sb)/(total_boot-1) )
+        n_ea = numpy.sqrt(total_boot * (ssa - sa * sa) / (total_boot - 1))
+        n_eb = numpy.sqrt(total_boot * (ssb - sb * sb) / (total_boot - 1))
         print("")
         print("Bootstrap uncertainties based on  %5d  determinations\n",
-           total_boot)
-        print("   e_a=%7.4f  e_b=%7.4f\n",n_ea,n_eb)
+              total_boot)
+        print("   e_a=%7.4f  e_b=%7.4f\n", n_ea, n_eb)
     return 0
 
+
 if __name__ == "__main__":
+    global sa, ssa, sb, ssb, factas, factbs
 
     filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
@@ -754,7 +745,7 @@ if __name__ == "__main__":
     # preprocess input
     list_temp = tables.split(" ")
     list_clusters = [x for x in list_temp if x.strip()]
-    random_numbers = random_number(number=rand_num, seed=rand_seed, nboot=num_bootstrap)
+    random_numbers = random_number(number=rand_num, seed=rand_seed)
     print(random_numbers)
     list_filenames = filename.split(",")
     list_files = [x for x in list_filenames if x.strip()]
