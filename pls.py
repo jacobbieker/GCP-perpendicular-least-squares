@@ -55,6 +55,30 @@ import statsmodels.api as sm
 # Use median zeropoint, not mean
 # finding the residual: delta =(logre -a*1og(J) - b*log<I>)/(1 + a^2 + b^2)^(1/2).
 
+a_factor = 0
+b_factor = 0
+sig_a = 0
+sig_b = 0
+a_factor_in = 0
+b_factor_in = 0
+a_iterations = 0
+b_iterations = 0
+max_iterations = 0
+a_out = 0.0
+b_out = 0.0
+restart_factor = False
+printing = True
+
+# Initalizing variables
+very_low_in = 0
+very_high_in = 0
+delta_out = 0.0
+flow_a = False
+flow_first = False
+flow_b = False
+a_in = 0.0
+b_in = 0.0
+end = False
 
 
 def fits_to_dict(table, clusters):
@@ -303,11 +327,11 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
         except (IOError):
             print("Cannot find " + str(filename))
             break
-    total_galaxies = len(finished_table)
-    finished_table["ROW"] = numpy.arange(1, total_galaxies)
+    gal_total = len(finished_table)
+    finished_table["ROW"] = numpy.arange(1, gal_total)
     # print("Finished Table")
     # print(finished_table)
-    return finished_table, total_galaxies
+    return finished_table, gal_total
 
 
 def initial_guess(largest_cluster, type_solution):
@@ -390,11 +414,6 @@ def bootstrap_cluster(table_dict):
         cluster_table[x2_col] = 0.0
 
     # TODO: bootstrap a cluster to get a different distribution to check with check_guess
-    return 0
-
-
-def determine_uncertainty(solutions):
-    # TODO: Take a list or dict of solutions and determine the uncertainty in them
     return 0
 
 
@@ -590,11 +609,11 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
         return B[0] * x + B[1] * x + B[2]
 
     intable = str(input("Input Table: "))
-    y_col = str(input("Y column name, log r") or "logre_r")
-    x1_col = str(input("X1 column name, log sigma") or "logsig_lit")
-    x2_col = str(input("X2 column name, surface brightness") or "<mu_r>e")
-    rows = str(input("Rows: ") or "")
-    verbose = bool(input("Verbose") or False)
+    y_col_in = str(input("Y column name, log r") or "logre_r")
+    x1_col_in = str(input("X1 column name, log sigma") or "logsig_lit")
+    x2_col_in = str(input("X2 column name, surface brightness") or "<mu_r>e")
+    rows_in = str(input("Rows: ") or "")
+    verbose_in = bool(input("Verbose") or False)
 
     if rows == "":
         data = table[y_col, x1_col, x2_col]
@@ -622,7 +641,7 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
         return out
 
 
-def cleanup(table):
+def cleanup(table, num_bootstrap, ssa, ssb, sa, sb, flow_boot):
     table_dict = fits_to_dict(table, clusters)
     if end and not flow_boot:
         print(" ")
@@ -650,16 +669,14 @@ def cleanup(table):
         print("   All       %3d  %8.5f %8.5f %8.5f\n", len(table["RESIDUAL"]), zero, rms, lrerms)
 
     if num_bootstrap > 0:
-        #tdelete(tmpsel//","//tmpboo,verify=no, >>& "/dev/null")
-        #delete(tmpran,verify=no, >>& "/dev/null")
-
         flow_boot=True
         n_flprint=False
         # n_flboot=yes ; n_flprint=yes  # test printout
         a_in = a_out
         b_in = b_out
-        a_factor_in = n_factas
-        b_factor_in = n_factbs
+        # Reset to original factor in
+        a_factor_in = factas
+        b_factor_in = factbs
         max_iterations = iterations    # reset maxiter
         n_restart = restart    # enable restart again if it originally was
 
@@ -671,13 +688,14 @@ def cleanup(table):
             print("Output from bootstrap samples")
             print("")
         if num_bootstrap < total_boot:
-            n_ssa += a_out**2
-            n_sa += a_out
-            n_ssb += b_out**2
-            n_sb += b_out
+            ssa += a_out**2
+            sa += a_out
+            ssb += b_out**2
+            sb += b_out
 
-        rand_nums = random_number(total_galaxies, seed=(rand_seed - num_bootstrap), num_bootstrap)
+        rand_nums = random_number(total_galaxies, seed=(rand_seed - num_bootstrap))
         # Creates random numbers and randomizes the order of the galaxies
+        table = dict_to_fits(table_dict, clusters)
         for index, num in enumerate(rand_nums):
             table["C1"][index] = int(1.0 + num)
 
@@ -689,24 +707,24 @@ def cleanup(table):
         #tjoin(tmpran,n_taball,tmpboo,"c1","row",tolerance=0.)
         table["ROW"] = table["C1"]
         num_bootstrap -= 1
-        bootstrap(table_dict=table)
+        bootstrap_cluster(table_dict=table)
 
 
     # cleanup and final zero point, rms for each cluster, total rms
 
     if flow_boot:
         # add the last output
-        n_ssa+= a_out*a_out
-        n_sa+=a_out
-        n_ssb+=b_out*b_out
-        n_sb+=b_out
-        print(n_sa,n_ssa,n_sb,n_ssb)
-        n_ssa=n_ssa/total_boot
-        n_sa=n_sa/total_boot
-        n_ssb=n_ssb/total_boot
-        n_sb=n_sb/total_boot
-        n_ea=numpy.sqrt( total_boot*(n_ssa-n_sa*n_sa)/(total_boot-1) )
-        n_eb=numpy.sqrt( total_boot*(n_ssb-n_sb*n_sb)/(total_boot-1) )
+        ssa+= a_out*a_out
+        sa+=a_out
+        ssb+=b_out*b_out
+        sb+=b_out
+        print(sa,ssa,sb,ssb)
+        ssa /= total_boot
+        sa /= total_boot
+        ssb /= total_boot
+        sb /= total_boot
+        n_ea=numpy.sqrt( total_boot*(ssa-sa*sa)/(total_boot-1) )
+        n_eb=numpy.sqrt( total_boot*(ssb-sb*sb)/(total_boot-1) )
         print("")
         print("Bootstrap uncertainties based on  %5d  determinations\n",
            total_boot)
@@ -714,31 +732,6 @@ def cleanup(table):
     return 0
 
 if __name__ == "__main__":
-
-    a_factor = 0
-    b_factor = 0
-    sig_a = 0
-    sig_b = 0
-    a_factor_in = 0
-    b_factor_in = 0
-    a_iterations = 0
-    b_iterations = 0
-    max_iterations = 0
-    a_out = 0.0
-    b_out = 0.0
-    restart_factor = False
-    printing = True
-
-    # Initalizing variables
-    very_low_in = 0
-    very_high_in = 0
-    delta_out = 0.0
-    flow_a = False
-    flow_first = False
-    flow_b = False
-    a_in = 0.0
-    b_in = 0.0
-    end = False
 
     filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
@@ -806,6 +799,10 @@ if __name__ == "__main__":
     print(" (n_facta,n_bfact)=(%7.4f,%7.4f)\n", factor_change_a, factor_change_b)
     print("Columns           : ", galaxy_name, group_name, y_col, x1_col, x2_col)
     print("")
+
+    # Saving for use later
+    factas = factor_change_a
+    factbs = factor_change_b
 
     # Start bootstrap
     bootstrap_cluster(table_dict=fits_table)
