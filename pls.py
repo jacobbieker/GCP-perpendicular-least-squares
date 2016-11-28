@@ -85,6 +85,8 @@ flow_b = False
 a_in = 0.0
 b_in = 0.0
 end = False
+global n_norm
+n_norm = 1.0
 
 
 def fits_to_dict(table, clusters):
@@ -169,8 +171,8 @@ def min_quartile(table, total_galaxies):
     delta = very_high_num - very_low_num
 
     if printing:
-        print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %8.5f %8.5f %8.5f\n",
-              a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, very_low_num, very_high_num, delta)
+        print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %8.5f %8.5f %8.5f\n" %
+              (a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, very_low_num, very_high_num, delta))
     return delta
 
 
@@ -185,8 +187,8 @@ def min_delta(table, percentage, total_galaxies):
         delta = numpy.mean(absolute_residuals)
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
         if printing:
-            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f\n",
-                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, delta, rms)
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f\n" %
+                  (a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, delta, rms))
         return rms, delta
     elif percentage == 60:
         high_num = total_galaxies * 0.6 + 0.5
@@ -195,8 +197,8 @@ def min_delta(table, percentage, total_galaxies):
         delta = numpy.mean(absolute_residuals_60)
         rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1) / (len(residuals_60) - 3))
         if printing:
-            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f %4d\n",
-                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, delta, rms, len(residuals_60))
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %10.7f %4d\n" %
+                  (a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, delta, rms, len(residuals_60)))
         return rms, delta
 
 
@@ -206,8 +208,7 @@ def min_rms(table, percentage):
     if percentage == 100:
         rms = numpy.std(residuals) * numpy.sqrt((len(residuals) - 1) / (len(residuals) - 3))
         if printing:
-            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f\n",
-                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, rms)
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f\n" % (a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, rms))
         return rms
     elif percentage == 60:
         lower_num = 0.2 * len(residuals) + 0.5
@@ -215,8 +216,7 @@ def min_rms(table, percentage):
         residuals_60 = residuals[int(lower_num):int(higher_num)]
         rms = numpy.std(residuals_60) * numpy.sqrt((len(residuals_60) - 1.0) / (len(residuals_60) - 3.0))
         if printing:
-            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %4d\n",
-                  a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, rms, len(residuals_60))
+            print("%3d %6.4f  %3d %6.4f  %7.4f %7.4f %10.7f %4d\n" % (a_iterations, a_factor, b_iterations, b_factor, a_in, b_in, rms, len(residuals_60)))
         return rms
 
 
@@ -250,7 +250,7 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
             # use with rms
             n_zero = numpy.nanmean(zeropoint_dict["z" + str(nclus)])
 
-        print("Zero point for cluster  %-3d : %8.5f\n", nclus, n_zero)
+        print("Zero point for cluster  %-3d : %8.5f\n" % (nclus, n_zero))
 
         # Copy the zeropoint values into the fits_table
         table_dict[nclus]["ZEROPOINT"] = n_zero
@@ -259,9 +259,9 @@ def zeropoint(fits_table, clusters, type_solution, res_choice, y_col, x1_col, x2
         table_dict = residuals(table_dict, n_norm, nclus, n_zero, zeropoint_dict)
 
     fits_table = dict_to_fits(table_dict, clusters)
-    print("Final FITS TABLE")
-    print(fits_table)
-    print("\n\n\n\n END FITS TABLE")
+    #print("Final FITS TABLE")
+    #print(fits_table)
+    #print("\n\n\n\n END FITS TABLE")
     return fits_table
 
 
@@ -341,8 +341,8 @@ def bootstrap_cluster(table_dict):
             rich_cluster = key
 
     if printing:
-        print("Cluster number with most data         :  %3d\n", rich_cluster)
-        print("Number of galaxies in this cluster    :  %3d\n", rich_members)
+        print("Cluster number with most data         :  %3d\n" % (rich_cluster))
+        print("Number of galaxies in this cluster    :  %3d\n" % (rich_members))
 
     # Fitting cluster to get rid of any NaN points
     if solve_plane:
@@ -353,7 +353,7 @@ def bootstrap_cluster(table_dict):
     # TODO Unsure what this does, seems to output column info into IRAF parameters tinfo(tmpsel,ttout-)
 
     if printing:
-        print("Number of galaxies fit in this cluster:  %3d\n", rich_members)
+        print("Number of galaxies fit in this cluster:  %3d\n" % (rich_members))
     # Get the actual fitting done
     odr_fit = tfitlin(cluster_table, y_col, x1_col, x2_col, rows="", verbose=False)
     odr_fit.pprint()
@@ -378,7 +378,7 @@ def bootstrap_cluster(table_dict):
         b_in = 0.0
 
     if printing:
-        print("Initial values               (a,b)=(%7.4f,%7.4f)\n", a_factor, b_factor)
+        print("Initial values               (a,b)=(%7.4f,%7.4f)\n" % (a_factor, b_factor))
         print("")
 
     if solve_plane:
@@ -414,8 +414,8 @@ def change_coefficients():
             max_iterations /= 2.0
             if printing:
                 print("")
-                print("Restarting with (a,b)=(%7.4f,%7.4f)\n", a_in, b_in)
-                print("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n", a_factor_in, b_factor_in)
+                print("Restarting with (a,b)=(%7.4f,%7.4f)\n" % (a_in, b_in))
+                print("    (n_facta,n_bfact)=(%7.4f,%7.4f)\n" % (a_factor_in, b_factor_in))
                 print("")
 
             restart()
@@ -646,7 +646,7 @@ def cleanup(table):
                 (len(table_dict[nclus]["Z" + str(nclus)]) - 1.) / (len(table_dict[nclus]["Z" + str(nclus)]) - 3.))
             lrerms = rms
             rms = rms / abs(n_norm)  # normalized
-            print("   %3d       %3d  %8.5f %8.5f %8.5f\n", nclus, len(table_dict[nclus]), zero, rms, lrerms)
+            print("   %3d       %3d  %8.5f %8.5f %8.5f\n" % (nclus, len(table_dict[nclus]), zero, rms, lrerms))
 
         table = dict_to_fits(table_dict, clusters)
         # residuals in table normalized
@@ -656,7 +656,7 @@ def cleanup(table):
             zero = numpy.nanmean(table["RESIDUAL"])
         rms = numpy.std(table["RESIDUAL"]) * numpy.sqrt((len(table["RESIDUAL"]) - 1.) / (len(table["RESIDUAL"]) - 3.))
         lrerms = rms * abs(n_norm)
-        print("   All       %3d  %8.5f %8.5f %8.5f\n", len(table["RESIDUAL"]), zero, rms, lrerms)
+        print("   All       %3d  %8.5f %8.5f %8.5f\n" % (len(table["RESIDUAL"]), zero, rms, lrerms))
 
     if num_bootstrap > 0:
         flow_boot = True
@@ -715,9 +715,9 @@ def cleanup(table):
         n_ea = numpy.sqrt(total_boot * (ssa - sa * sa) / (total_boot - 1))
         n_eb = numpy.sqrt(total_boot * (ssb - sb * sb) / (total_boot - 1))
         print("")
-        print("Bootstrap uncertainties based on  %5d  determinations\n",
-              total_boot)
-        print("   e_a=%7.4f  e_b=%7.4f\n", n_ea, n_eb)
+        print("Bootstrap uncertainties based on  %5d  determinations\n" %
+              (total_boot))
+        print("   e_a=%7.4f  e_b=%7.4f\n" % (n_ea, n_eb))
     return 0
 
 
@@ -772,7 +772,7 @@ if __name__ == "__main__":
         ssb = 0
         sb = 0
 
-    n_norm = 1.  # min in y
+    global n_norm # min in y
     if res_choice == "per":
         n_norm = numpy.sqrt(1.0 + a_factor ** 2 + b_factor ** 2)  # min perpendicular
     if res_choice == "x1":
@@ -781,11 +781,11 @@ if __name__ == "__main__":
         n_norm = -1.0 * b_factor  # min in x2
 
     print("")
-    print("Fitting technique : iterative, %s %s minimized, %s zero points\n",
-          res_choice, min_choice, zeropoint_choice)
-    print("Number of clusters: %4d\n", clusters)  # TODO Make sure this actually counts all clusters inputted
-    print("Number of galaxies: %4d\n", total_galaxies)
-    print(" (n_facta,n_bfact)=(%7.4f,%7.4f)\n", factor_change_a, factor_change_b)
+    print("Fitting technique : iterative, %s %s minimized, %s zero points\n" %
+          (res_choice, min_choice, zeropoint_choice))
+    print("Number of clusters: %4d\n" % (clusters))  # TODO Make sure this actually counts all clusters inputted
+    print("Number of galaxies: %4d\n" % (total_galaxies))
+    print(" (n_facta,n_bfact)=(%7.4f,%7.4f)\n" % (factor_change_a, factor_change_b))
     print("Columns           : ", galaxy_name, group_name, y_col, x1_col, x2_col)
     print("")
 

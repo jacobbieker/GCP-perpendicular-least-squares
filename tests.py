@@ -59,13 +59,13 @@ class TestProgram(unittest.TestCase):
         results_1 = pls.zeropoint(coma_table_three, cluster, type_solution[0], res_choice[0], y_col, x1_col, x2_col, a_factor, b_factor, True)
         #results_2 = pls.zeropoint(coma_table_two, cluster, type_solution[1], res_choice[1], y_col, x1_col, x2_col, a_factor, b_factor)
 
-        residuals_1 = pls.residuals(results_1[4], results_1[0], results_1[1], results_1[2], results_1[3])
+        #residuals_1 = pls.residuals(results_1[4], results_1[0], results_1[1], results_1[2], results_1[3])
         #residuals_2 = pls.residuals(results_2[4], results_2[0], results_2[1], results_2[2], results_2[3])
 
-        self.assertNotEqual(residuals_1['res'], None)
+        #self.assertNotEqual(residuals_1['res'], None)
         #self.assertNotEqual(residuals_2['res'], None)
 
-        self.assertNotEqual(residuals_1['r' + str(results_1[1])], not None)
+        #self.assertNotEqual(residuals_1['r' + str(results_1[1])], not None)
         #self.assertNotEqual(residuals_2['r' + str(results_2[1])], not None)
 
     def testBootstrap(self):
