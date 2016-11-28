@@ -324,12 +324,28 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
             break
     gal_total = len(finished_table)
     finished_table["ROW"] = numpy.arange(0, gal_total)
+    print(gal_total)
+
+    # Possibly change and remove all rows with NaN values
+    row_to_remove = []
+    for index, row in enumerate(finished_table):
+        if solve_plane:
+            if numpy.isnan(row[y_col]) or numpy.isnan(row[x1_col]) or numpy.isnan(row[x2_col]):
+                row_to_remove.append(index)
+        else:
+            if numpy.isnan(row[y_col]) or numpy.isnan(row[x1_col]):
+                row_to_remove.append(index)
+
+    finished_table.remove_rows(row_to_remove)
+    gal_total = len(finished_table)
+    print(gal_total)
     # print("Finished Table")
     # print(finished_table)
     return finished_table, gal_total
 
 
-def bootstrap_cluster(table_dict):
+def bootstrap_cluster(table):
+    table_dict = fits_to_dict(table, clusters)
     global printing, a_in, b_in, solve_plane
     # Fit cluser with the most data to get an idea of where to iterate from
     rich_cluster = 0
@@ -341,7 +357,7 @@ def bootstrap_cluster(table_dict):
             rich_cluster = key
 
     if printing:
-        print("Cluster number with most data         :  %3d\n" % (rich_cluster))
+        print("Cluster number with most data         :  %3d\n" % (int(rich_cluster)))
         print("Number of galaxies in this cluster    :  %3d\n" % (rich_members))
 
     # Fitting cluster to get rid of any NaN points
@@ -597,14 +613,28 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
     #verbose_in = bool(input("Verbose") or False)
 
     if rows == "":
-        data = table[y_col, x1_col, x2_col]
+        if solve_plane:
+            data = table[y_col, x1_col, x2_col]
+            #data = data.view(data.dtype.fields
+
+             #          or data.dtype, numpy.ndarray)
+            #data = data[~numpy.isnan(data)]
+        else:
+            data = table[y_col, x1_col]
+            #data = data.view(data.dtype.fields
+             #                or data.dtype, numpy.ndarray)
+            #data = data[~numpy.isnan(data)]
     else:
-        data = table[y_col, x1_col, x2_col][rows]
+        if solve_plane:
+            data = table[y_col, x1_col, x2_col][rows]
+        else:
+            data = table[y_col, x1_col][rows]
 
     if not solve_plane:
         x = data[x1_col]
         y = data[y_col]
         guess = linregress(x, y)
+        print(guess)
         mod = odr.Model(f)
         dat = odr.Data(x, y)
         od = odr.ODR(dat, mod, beta0=guess[0:2])
@@ -612,7 +642,7 @@ def tfitlin(table, y_col, x1_col, x2_col, rows, verbose):
         return out
     else:
         # For the three dimensional case, the y has to be a matrix for lstsq to work
-        x = data[x1_col, x2_col].to_pandas()
+        x = data[x1_col, x2_col]
         y = data[y_col]
         guess = numpy.linalg.lstsq(x, y)
         mod = odr.Model(f3)
@@ -720,8 +750,8 @@ def cleanup(table):
         print("   e_a=%7.4f  e_b=%7.4f\n" % (n_ea, n_eb))
     return 0
 
-
 if __name__ == "__main__":
+    global n_norm # min in y
     filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
     tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
     min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
@@ -772,7 +802,6 @@ if __name__ == "__main__":
         ssb = 0
         sb = 0
 
-    global n_norm # min in y
     if res_choice == "per":
         n_norm = numpy.sqrt(1.0 + a_factor ** 2 + b_factor ** 2)  # min perpendicular
     if res_choice == "x1":
@@ -794,4 +823,4 @@ if __name__ == "__main__":
     factbs = factor_change_b
 
     # Start bootstrap
-    bootstrap_cluster(table_dict=fits_table)
+    bootstrap_cluster(table=fits_table)
