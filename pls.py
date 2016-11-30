@@ -85,8 +85,24 @@ flow_b = False
 a_in = 0.0
 b_in = 0.0
 end = False
-global n_norm
 n_norm = 1.0
+iterations = 0
+y_col = ""
+x1_col = ""
+x2_col = ""
+galaxy_name = ""
+group_name = ""
+clusters = 0
+factor_change_a = 0.0
+factor_change_b = 0.0
+factas = 0.0
+factbs = 0.0
+total_boot = 0
+
+zeropoint_choice = ""
+min_choice = ""
+res_choice = ""
+solve_plane = False
 
 
 def fits_to_dict(table, clusters):
@@ -337,11 +353,10 @@ def read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_co
                 row_to_remove.append(index)
 
     finished_table.remove_rows(row_to_remove)
-    gal_total = len(finished_table)
-    print(gal_total)
+    gal_used = len(finished_table)
     # print("Finished Table")
     # print(finished_table)
-    return finished_table, gal_total
+    return finished_table, gal_total, gal_used
 
 
 def bootstrap_cluster(table):
@@ -750,25 +765,81 @@ def cleanup(table):
         print("   e_a=%7.4f  e_b=%7.4f\n" % (n_ea, n_eb))
     return 0
 
-if __name__ == "__main__":
+
+def startup(**kwargs):
+    global min_choice, res_choice, y_col, x1_col, x2_col, zeropoint_choice, galaxy_name, group_name
+    global factor_change_a, factor_change_b, iterations, restart_factor, num_bootstrap, solve_plane, clusters
+    global factas, factbs, total_boot, ssa, sa, ssb, sb
     global n_norm # min in y
-    filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
-    tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
-    min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
-    res_choice = str(input("Residual to minimize (per,y,x1,x2): ")).strip() or "per"
-    y_col = str(input("Column name for y: ")).strip().upper() or "lre_GR_sc".upper()
-    x1_col = str(input("Column name for x1: ")).strip().upper() or "lsig_re".upper()
-    x2_col = str(input("Column name for x2 (optional): ")).strip().upper()
-    zeropoint_choice = input("Zeropoints (median, mean): ") or "median"
-    galaxy_name = str(input("Column name for galaxy: ") or "GALAXY").strip().upper()
-    group_name = str(input("Column name for group: ") or "GROUP").strip().upper()
-    factor_change_a = float(input("Starting factor for changes in a: ") or 0.05)
-    factor_change_b = float(input("Starting factor for changes in b: ") or 0.02)
-    iterations = int(input("Maximum number of iterations: ") or 0)
-    restart_factor = bool(input("Restart iteration with smaller factors: ") or True)
-    num_bootstrap = int(input("Number of estimates for bootstrap: ") or 0)
-    rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
-    rand_num = int(input("Number of random numbers: ") or 1)
+    if len(kwargs) > 0:
+        filename = kwargs["filename"].strip()
+        tables = ""
+        min_choice = "delta100"
+        res_choice = "per"
+        y_col = "lre_GR_sc".upper()
+        x1_col = "lsig_re".upper()
+        x2_col = ""
+        zeropoint_choice = "median"
+        galaxy_name = "GALAXY"
+        group_name = "GROUP"
+        factor_change_a = 0.05
+        factor_change_b = 0.02
+        iterations = 0
+        restart_factor = True
+        num_bootstrap = 0
+        rand_seed = 1
+        rand_num = 1
+        for name, value in kwargs.items():
+            if name == "tables":
+                tables = value
+            elif name == "min_choice":
+                min_choice = value
+            elif name == "res_choice":
+                res_choice = value
+            elif name == "y_col":
+                y_col = value.strip().upper()
+            elif name == "x1_col":
+                x1_col = value.strip().upper()
+            elif name == "x2_col":
+                x2_col = value.strip().upper()
+            elif name == "zeropoint_choice":
+                zeropoint_choice = value.strip()
+            elif name == "galaxy_name":
+                galaxy_name = value.strip().upper()
+            elif name == "group_name":
+                group_name = value.strip().upper()
+            elif name == "factor_change_a":
+                factor_change_a = value
+            elif name == "factor_change_b":
+                factor_change_b = value
+            elif name == "iterations":
+                iterations = value
+            elif name == "restart_factor":
+                restart_factor = value
+            elif name == "num_bootstrap":
+                num_bootstrap = value
+            elif name == "rand_seed":
+                rand_seed = value
+            elif name == "rand_num":
+                rand_num = value
+    else:
+        filename = str(input("Enter the filename(s) containing the cluster(s) (separated by a comma): ")).strip()
+        tables = str(input("List of input STSDAS tables (e.g. Table1 Table2 Table3): ")).strip()
+        min_choice = str(input("Distance to minimize (delta100,delta60,rms100,rms60,quartile): ")).strip() or "delta100"
+        res_choice = str(input("Residual to minimize (per,y,x1,x2): ")).strip() or "per"
+        y_col = str(input("Column name for y: ")).strip().upper() or "lre_GR_sc".upper()
+        x1_col = str(input("Column name for x1: ")).strip().upper() or "lsig_re".upper()
+        x2_col = str(input("Column name for x2 (optional): ")).strip().upper()
+        zeropoint_choice = input("Zeropoints (median, mean): ") or "median"
+        galaxy_name = str(input("Column name for galaxy: ") or "GALAXY").strip().upper()
+        group_name = str(input("Column name for group: ") or "GROUP").strip().upper()
+        factor_change_a = float(input("Starting factor for changes in a: ") or 0.05)
+        factor_change_b = float(input("Starting factor for changes in b: ") or 0.02)
+        iterations = int(input("Maximum number of iterations: ") or 0)
+        restart_factor = bool(input("Restart iteration with smaller factors: ") or True)
+        num_bootstrap = int(input("Number of estimates for bootstrap: ") or 0)
+        rand_seed = int(input("Seed for random used in bootstrap: ") or 1)
+        rand_num = int(input("Number of random numbers: ") or 1)
 
     # preprocess input
     list_temp = tables.split(" ")
@@ -789,7 +860,7 @@ if __name__ == "__main__":
         solve_plane = False
     else:
         solve_plane = True
-    fits_table, total_galaxies = read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col)
+    fits_table, total_galaxies, galaxies_used = read_clusters(list_files, solve_plane, galaxy_name, group_name, y_col, x1_col, x2_col)
 
     # Number of clusters
     clusters = len(list_files)
@@ -824,3 +895,7 @@ if __name__ == "__main__":
 
     # Start bootstrap
     bootstrap_cluster(table=fits_table)
+
+
+if __name__ == "__main__":
+    startup()
