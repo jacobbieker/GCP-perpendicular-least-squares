@@ -396,8 +396,41 @@ def bootstrap_cluster(table):
         # head(tmpout,nlines=6) | fields("STDIN","3-4",lines="6") | \
         # scan(n_a,n_b)
         # TODO Know these are wrong, figuring out what needs to be here for the factors
+        # Possibly, as these are the 3 and 4th output
+        #          sqrt(var(nfit))            rms scatter of the fit
+        #         coef(norder+1,i)   i=1,norder  RMA fit coefficients
+        # So it would put it at the 3rd and 4th coefficients? Or:
+        # The 6th line printed when on vflag= False
+        #         write(*,'(1x,12x,3(2x,f7.3))') (scoef(nfit,i), i=1,norder)
+        # This gives 1 carriage return, then 12 carriage returns
         a_in = odr_fit[3]
         b_in = odr_fit[4]
+        """
+        Final Output from fitplan when vflag = False
+
+              write(*,'(1x)')
+      write(*,'(1x,"===> Transformed fit:",3x,"ntotal = ",i3,
+     &     " <===")') ntotal
+      write(*,'(1x)')
+      write(*,'(1x,12x,4(2x,a6,i1))')
+     &         ("  coef",i, i=1,norder),"  rms"
+      do 600 nfit=1,norder,1
+        write(*,'(1x,"x(",i1,",j) min",2x,4(2x,f7.3))')
+     &          nfit, (coef(nfit,i), i=1,norder), sqrt(var(nfit))
+        write(*,'(1x,12x,3(2x,f7.3))') (scoef(nfit,i), i=1,norder)
+ 600  continue
+        write(*,'(1x,"RMA",9x,4(2x,f7.3))')
+     &          (coef(norder+1,i), i=1,norder), sqrt(var(norder+1))
+        write(*,'(1x,12x,3(2x,f7.3))') (scoef(norder+1,i), i=1,norder)
+
+      stop
+
+      The output into the program seems to take only the residuals from the coefficients of the ODR fit
+      Both the top and the bottom seem to reference the same lines of the Fortran output, just shifted one space
+      If correct, b_in in the else is the same at the a_in in the resalgo=="y" case
+      Have not mapped scipy's ODR to the fitplan results yet though to see if its possible or if all the Fortran files
+      have to be rewritten as well
+        """
     else:
         # On the 3rd to last line from tfitlin, which goes to STDIN, fields takes the 2nd and 3rd whitespace
         # separated values
@@ -845,7 +878,6 @@ def startup(**kwargs):
     list_temp = tables.split(" ")
     list_clusters = [x for x in list_temp if x.strip()]
     random_numbers = random_number(number=rand_num, seed=rand_seed)
-    print(random_numbers)
     list_filenames = filename.split(",")
     list_files = [x for x in list_filenames if x.strip()]
 

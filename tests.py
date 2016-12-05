@@ -82,3 +82,8 @@ class TestProgram(unittest.TestCase):
 
     def testTfitlin(self):
         return 0
+
+    def testSetup(self):
+        #pls.startup(filename="comafit.fits", y_col="lreJB_kpc", x1_col="lsigma_cor", x2_col="lIeJB_cor",
+        #            factor_change_a=1.1860, factor_change_b=-0.8020, zeropoint_choice="median")
+        pls.startup(filename="comafit.fits", y_col="lML_JB", x1_col="lMass")
