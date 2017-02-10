@@ -39,3 +39,51 @@ ntotal = 0
 nfit = 0
 # logical vflag
 vlfag = False
+
+
+########################### fitplan.f converted code #########################
+"""c Get the dimension  and flag for output. Read data from STDIN
+      read(*,*) norder, vflag
+      if(norder .eq. 2 .or. norder .eq. 3) then
+        do 30 i=1,NMAX1,1
+           read(*,*,err=940,end=40) (x(j,i), j=1,norder)
+c Find the column with expected mu in it and transform
+      if(norder .eq. 3 .and. i .eq. 1) then
+        if( x(1,i) .gt. x(2,i) .and. x(1,i) .gt. x(3,i) ) then
+           ncol=1
+        else if( x(2,i) .gt. x(1,i) .and. x(2,i) .gt. x(3,i) ) then
+           ncol=2
+        else if( x(3,i) .gt. x(1,i) .and. x(3,i) .gt. x(2,i) ) then
+           ncol=3
+        endif
+      endif
+      if(norder .eq. 3) then
+        x(ncol,i) = x(ncol,i)-SCALE
+      endif
+  30    continue
+      else
+        write(*,*) "Wrong dimension used, must be 2 or 3"
+        stop
+      endif
+
+  40    continue
+
+      if(vflag) then
+        write(*,*) "==> End of reading <=="
+      endif
+      write(*,*) "ncol=",ncol
+
+      ntotal = i-1
+"""
+# Get dimensions and flags for output
+
+
+# Initialize x(norder+1,j) = 1
+for j in range(1, ntotal):
+    x[norder+1, j] = 1.0
+
+# initialize coefficients
+for i in range(1, norder):
+    for j in range(1, norder):
+        coef[i,j] = 0.0
+    coef[i, norder+1] = -1.0
